@@ -83,6 +83,8 @@ Stack obrigatória preservada, sem novas dependências. Snapshots agregados pres
 
 ## Próximas etapas ainda pendentes
 
+Validação de desempenho nacional: [relatório com medidas, simulações e limites](docs/VALIDACAO_COLETA_NACIONAL.md). Benchmark remoto pequeno no simulado, dimensões exatas do EA12 e projeções locais; não habilita produção. Scripts: `benchmark:national` (rede opt-in), `benchmark:local-national`, `simulate:national` e `report:national`.
+
 Prioridade: auditoria de reorganizações nos históricos, resolver exceções de conclusão, validar totalização oficial positiva, acoplar transporte/persistência à fila global e medir atraso nacional. O cadastro observado tem 6.292 segmentos: a 2 req/s, uma varredura isolada já exige ao menos 52min26s, antes dos agregados, latência e falhas. Isso é uma estimativa aritmética, não medição operacional.
 
 Também pendentes: SSE, malhas municipais fora do Acre, exportação analítica e operação oficial. `pnpm backup` cria cópia consistente SQLite via API nativa, incluindo WAL, em `data/backups`. Instruções de históricos e limites em [OPERACAO.md](docs/OPERACAO.md). BU permanece fora do caminho crítico.

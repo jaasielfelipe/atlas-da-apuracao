@@ -156,3 +156,15 @@ Validação: **46 testes**, incluindo novos testes de transporte injetado, resta
 Nenhuma consulta nova ao TSE; evidência deste incremento é sintética/local. O serviço ainda não está ligado a polling nacional e ingestão zonal real. Não existe lease de propriedade entre processos, portanto exige um único proprietário por banco/IP. Bytes registrados não são medição completa de tráfego em falhas. Pendências oficiais e auditoria territorial permanecem inalteradas.
 
 A tentativa de commit da noite anterior não foi executada: a revisão automática de aprovação atingiu limite de uso antes da ação. O código ficou local; esta continuidade retoma também seu registro no remoto.
+
+## Validação técnica de desempenho nacional — 03/10/2026
+
+Relatório: [VALIDACAO_COLETA_NACIONAL.md](VALIDACAO_COLETA_NACIONAL.md). Ferramentas opt-in adicionadas sem alterar arquitetura, stack, escopo nacional ou polling do produto.
+
+- EA12 simulado novamente consultado, hash idêntico à fixture: 6.289 segmentos, 2.639 ZEs, 5.755 entradas município/localidade (5.565 de zona única e 190 de múltiplas); exterior discriminado.
+- 56 requisições sequenciais ao simulado com orçamento alvo 2 req/s, teto configurável 20: 20 HTTP200, 36 HTTP304; nenhum 404/429/5xx. ETag e Last-Modified conferidos separadamente. Nenhuma consulta oficial ou teste de saturação.
+- Latência zonal 200: p50 652 ms, p95/p99 888 ms (n=10, cauda insuficiente); tamanho médio 9.944 bytes. Percentis/amostras/URLs/hashes em `docs/evidence/national/benchmark.json`.
+- Gargalo observado: gravar fila inteira custa média 27,1 ms, duas vezes por HTTP. Pipeline completo local de 300 ciclos, sem rede, levou 19,60s (15,30 ciclos/s), sem comprovar sustentação por horas.
+- Modelo local sobre todo o cadastro, com pisos 2/5/10/20 req/s, concentrações, falhas, prioridades, rechecagens e retificações. Hipóteses de concorrência/gravação incremental explicitadas; resultados simulados não aprovam produção nem conciliação.
+- Recomendações e alternativas documentadas antes de qualquer mudança estrutural. Coleta e conciliação nacional oficial seguem não validadas.
+- Verificação: 49 testes, typecheck/build e format:check passaram. UI/servidor de coleta do produto não foram alterados; E2E visual não repetido. Modelos e relatório têm evidências JSON reproduzíveis, não equivalentes à validação oficial.

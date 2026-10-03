@@ -1,0 +1,22 @@
+{
+  "kind": "measured_local_no_network",
+  "requests": 300,
+  "queueSize": 6289,
+  "wallMs": 19602.716,
+  "throughput": 15.304001751594013,
+  "tickMs": {
+    "n": 300,
+    "p50": 62.02119999999991,
+    "p95": 82.48170000000027,
+    "p99": 108.58989999999903,
+    "max": 130.86110000000008,
+    "mean": 65.33854966666671
+  },
+  "assumptions": "300 corpos 200 idênticos reaproveitados, gate temporal avançado virtualmente; normalização real do mesmo corpo, seleção/duas gravações integrais/cache/observação SQLite reais; sem latência HTTP e sem snapshots normalizados nacionais",
+  "bodyCount": {
+    "n": 1
+  },
+  "observations": {
+    "n": 300
+  }
+}
