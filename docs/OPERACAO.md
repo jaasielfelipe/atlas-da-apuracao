@@ -46,3 +46,9 @@ Cadastro EA12 oficial observado: 6.292 segmentos, 2.641 chaves UF+ZE, incluindo 
 5. Passar testes, typecheck, build e revisão visual com as novas fontes antes de alterar capacidades oficiais.
 
 Não há coleta nem conciliação nacional oficial validada nesta entrega.
+
+## Coletor otimizado (03/10)
+
+Consulte `OTIMIZACAO_COLETA_NACIONAL.md` para parâmetros medidos, cadências e limites. `PersistentCollector.run(transport, signal)` é o único loop de operação de todos os feeds em um banco; lease não coordena outros bancos/IP. Transporte deve retornar conclusão exclusivamente do adapter validado. Passe intervalMs/maxInFlight/pollMs/auditMs explicitamente para cenário nacional; padrões antigos de polling não constituem SLA.
+
+`pnpm benchmark:concurrent` mede amostra do simulado sob o mesmo gate, interrompe em erro e nunca habilita modo oficial do painel. `pnpm reconcile:national` produz inventário nacional sem alterar imports/matches. A implantação funcional da coleta nacional real ainda exige conectar cadastro, pistas EA15, ingestão normalizada e observabilidade; não confundir cache coletado com coorte pronta. Resultados agregados continuam separados e não dependem da comparação histórica.

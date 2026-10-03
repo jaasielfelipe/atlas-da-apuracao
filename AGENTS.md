@@ -50,3 +50,7 @@ Motor zonal puro e fluxo SQLite/API/UI disponíveis somente em fixture; migratio
 TSE: https://www.tse.jus.br/eleicoes/informacoes-tecnicas-sobre-a-divulgacao-de-resultados
 
 Confira `docs/CONTRATOS_E_TESTES.md` para cenários de verificação e checklists. Atualize a documentação quando uma hipótese técnica for confirmada por arquivos reais.
+
+### Atualização de desempenho — 03/10/2026
+
+Coletor incremental/concorrente e migration 005 implementados; medições locais e amostras HTTP do simulado em `docs/OTIMIZACAO_COLETA_NACIONAL.md`. Lease é por banco; todos os feeds devem compartilhar o mesmo serviço. Painel continua fixture; não habilitar oficial com base no benchmark. Inventário nacional real encontrou 2.580 ZEs de composição igual, ainda review e sem promoção a verified. Auditoria territorial e integração nacional normalizada continuam pendentes.

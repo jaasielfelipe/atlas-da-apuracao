@@ -168,3 +168,18 @@ Relatório: [VALIDACAO_COLETA_NACIONAL.md](VALIDACAO_COLETA_NACIONAL.md). Ferram
 - Modelo local sobre todo o cadastro, com pisos 2/5/10/20 req/s, concentrações, falhas, prioridades, rechecagens e retificações. Hipóteses de concorrência/gravação incremental explicitadas; resultados simulados não aprovam produção nem conciliação.
 - Recomendações e alternativas documentadas antes de qualquer mudança estrutural. Coleta e conciliação nacional oficial seguem não validadas.
 - Verificação: 49 testes, typecheck/build e format:check passaram. UI/servidor de coleta do produto não foram alterados; E2E visual não repetido. Modelos e relatório têm evidências JSON reproduzíveis, não equivalentes à validação oficial.
+
+## Otimização incremental e concorrente — 03/10/2026
+
+Implementação e medições em [OTIMIZACAO_COLETA_NACIONAL.md](OTIMIZACAO_COLETA_NACIONAL.md). Migration 005; UPSERT de jobs alterados, gate único, pool configurável com vaga/precedência de BR/UF, pistas coalescidas, auditorias distribuídas, backoff/pausa global, lease por banco e replay imutável. Teste de fila com 6.292 jobs confirma duas atualizações do único job servido. Nenhuma mudança de stack, metodologia, universo ou frontend.
+
+- **Local/sintético:** 300 ciclos/6.289 jobs, 1.179 ms, 254,36 ciclos/s, p95 5,56 ms. Baseline 19.603 ms/15,30 ciclos/s. Ganho 16,62× neste ensaio curto; não é medição de ingestão nacional distinta/coorte.
+- **Simulado real:** 76 HTTP em duas amostras a 2 req/s, concorrência 2 e 3; 40 HTTP200, 36 HTTP304, nenhum erro. Pico 2 em voo em ambas. Agregados BR/AC normalizados persistidos separadamente, sem dependência histórica. Não houve coleta de todos os resultados nacionais nem consultas ao oficial.
+- **Dados oficiais/históricos capturados:** cruzamento nacional de 6.292 unidades: 6.184 chaves comuns (98,28%); 2.580 ZEs/5.940 segmentos de composição igual, 1.586 multissegmento; 52 ZEs uncertain, 9 unmatched; 186 segmentos ZZ discriminados. Nenhum verified: auditoria de reorganizações nacional continua pendente. Igualdade de códigos/composição não comprova continuidade.
+- **Verificações:** 57 testes passaram; typecheck/build passaram. Inicialização E2E inicialmente encontrou porta 3001 ocupada pelo servidor deste chat; ele foi encerrado para repetir o teste isolado.
+
+Recomendação inicial: 2 req/s, 2 em voo, sem elevar para 20. Cadências e limites quantitativos no relatório: preservação de agregados implica atraso nacional potencialmente longo com esse orçamento. O painel continua fixture e a coleta/coorte oficial nacional permanece **não validada**. Esse incremento não habilita automaticamente ambientes reais.
+
+Fechamento da verificação: E2E repetido com sucesso (**1 fluxo, 22,4s**). Capturas desktop/mobile da comparação inspecionadas: rótulo fixture, tabelas/matrizes e timeline preservados, rolagem interna móvel sem overflow da página. Assets frontend mantiveram os hashes do build anterior. A migração e o loop não alteraram o layout.
+
+Servidor compilado restabelecido em `127.0.0.1:3001` após backup SQLite consistente; ambiente fixture preservado e migração 005 aplicada. Formatação e `git diff --check` passaram. Após a regra conservadora final de conclusão, os 43 testes de contratos/domínio foram repetidos e passaram.

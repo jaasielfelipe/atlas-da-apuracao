@@ -47,3 +47,11 @@ it('limita bytes, rejeita JSON truncado e respeita Retry-After sem retry automá
   })(job, {});
   expect(result).toMatchObject({ status: 429, retryAfterMs: 900000 });
 });
+
+it('propaga conclusão somente após validação do corpo e contexto', async () => {
+  const transport = tseTransport({
+    fetch: async () => new Response('{"f":"o"}'),
+    validate: () => ({ complete: false }),
+  });
+  expect(await transport(job, {})).toMatchObject({ status: 200, complete: false });
+});

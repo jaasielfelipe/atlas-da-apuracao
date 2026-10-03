@@ -35,7 +35,8 @@ export class Store {
         this.db.prepare('INSERT INTO migration VALUES(1, ?)').run(new Date().toISOString());
         this.db.pragma('user_version = 1');
       })();
-    else if (![1, 2, 3, 4].includes(Number(version))) throw Error('Versão do banco não suportada');
+    else if (![1, 2, 3, 4, 5].includes(Number(version)))
+      throw Error('Versão do banco não suportada');
     if (Number(version) < 2)
       this.db.transaction(() => {
         this.db.exec(
@@ -59,6 +60,14 @@ export class Store {
         );
         this.db.prepare('INSERT INTO migration VALUES(4, ?)').run(new Date().toISOString());
         this.db.pragma('user_version = 4');
+      })();
+    if (Number(version) < 5)
+      this.db.transaction(() => {
+        this.db.exec(
+          readFileSync(resolve(root, 'apps/api/src/db/migrations/005_collector_owner.sql'), 'utf8'),
+        );
+        this.db.prepare('INSERT INTO migration VALUES(5, ?)').run(new Date().toISOString());
+        this.db.pragma('user_version = 5');
       })();
   }
   insert(snapshot: Snapshot, raw: string) {

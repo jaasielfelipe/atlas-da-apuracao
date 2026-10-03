@@ -61,3 +61,55 @@ it('pausa global por 429 sobrevive reinício e 304 sem corpo anterior falha fech
     store.close();
   }
 });
+
+it('grava só o job alterado em fila nacional e mantém versões imutáveis no replay', async () => {
+  const store = new Store(':memory:');
+  let now = 1000000;
+  try {
+    const c = new PersistentCollector(store, () => now);
+    for (let i = 0; i < 6292; i++)
+      c.queue.add({ key: String(i), url: `fixture:${i}`, kind: 'zone', priority: 0 });
+    c.save();
+    store.db.exec(
+      'CREATE TABLE writes(key TEXT); CREATE TRIGGER log_job_update AFTER UPDATE ON collector_job BEGIN INSERT INTO writes VALUES(new.key); END;',
+    );
+    await c.tick(async () => ({ status: 200, bytes: 1, raw: 'A' }));
+    expect(store.db.prepare('SELECT COUNT(*) n FROM writes').get()).toEqual({ n: 2 });
+    const key = (store.db.prepare('SELECT key FROM writes LIMIT 1').get() as { key: string }).key;
+    now += 500;
+    c.queue.hint(key, now);
+    c.queue.jobs.get(key)!.priority = 100;
+    await c.tick(async () => ({ status: 200, bytes: 1, raw: 'B' }));
+    expect(c.captured(key, new Date(now - 1).toISOString())).toBe('A');
+    expect(c.captured(key, new Date(now).toISOString())).toBe('B');
+    now += 500;
+    c.queue.hint(key, now);
+    await c.tick(async () => ({ status: 503, bytes: 0 }));
+    expect(c.cached(key)).toBe('B');
+    expect(() => store.db.exec('DELETE FROM collector_observation')).toThrow('imutável');
+  } finally {
+    store.close();
+  }
+});
+it('loop usa lease único e drena HTTP antes de liberar proprietário', async () => {
+  const store = new Store(':memory:');
+  const stop = new AbortController();
+  try {
+    const a = new PersistentCollector(store);
+    const b = new PersistentCollector(store);
+    a.queue.add({ key: 'br', url: 'fixture:br', kind: 'aggregate', priority: 0 });
+    let finish!: () => void;
+    const running = a.run(async () => {
+      await new Promise<void>((r) => (finish = r));
+      return { status: 200, bytes: 2, raw: '{}' };
+    }, stop.signal);
+    await expect(b.tick(async () => ({ status: 200, bytes: 0 }))).rejects.toThrow('Outro coletor');
+    expect(() => b.save()).toThrow('Outro coletor');
+    stop.abort();
+    finish();
+    await running;
+    expect(store.db.prepare('SELECT COUNT(*) n FROM collector_owner').get()).toEqual({ n: 0 });
+  } finally {
+    store.close();
+  }
+});

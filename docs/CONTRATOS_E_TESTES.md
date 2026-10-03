@@ -202,3 +202,14 @@ O checklist G descreve a entrega anterior. A comparação atual está ativa **so
 | E2E offline | Camadas, mapa, seis shares, matriz 4×4 com seletor, contagens, tabela, timeline, replay, favoritos, falhas e desktop/mobile; nenhuma chamada externa |
 
 Pendentes para aceite integral: conclusão positiva no oficial, demais exceções, correspondência nacional auditada e exterior, transporte/cache/fila persistida reais, deduplicação real de HTTP 200, métricas de atraso/defasagem, camada cartográfica comparativa, exportação analítica e histórico final de referência territorial. Não usar esta tabela para marcar os casos restantes como aprovados.
+
+## Contratos adicionais — otimização nacional
+
+- Com 6.292 jobs, servir um único job causa duas atualizações somente nele, conservando os demais; reservar orçamento antes do HTTP e transacionar incrementalmente.
+- HTTP concorrente respeita limite em voo, uma chave ativa e um gate para todos os feeds/304; BR/UF precedem zonas vencidas e têm vaga reservada.
+- Pistas durante HTTP geram no máximo uma rechecagem; não anulam backoff/404. Retificação completa→parcial retorna ao fallback. Auditorias não vencem todas no mesmo instante.
+- HTTP200 sem ETag novo não conserva validador obsoleto. 304 órfão é erro; falha não remove último resultado. Resposta concorrente bem-sucedida não remove pausa de 429.
+- Lease do loop impede segundo proprietário no mesmo banco; parada aguarda os HTTP em curso. Não afirmar controle de outros processos/bancos no mesmo IP.
+- Replay de corpos usa somente observações aceitas até o instante; observações são imutáveis. Match estrutural nacional nunca é promovido a verified sem auditoria.
+
+Evidências e parâmetros: `OTIMIZACAO_COLETA_NACIONAL.md`.

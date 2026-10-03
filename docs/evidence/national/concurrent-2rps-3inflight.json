@@ -1,0 +1,416 @@
+{
+  "capturedAt": "2026-10-03T18:29:33.959Z",
+  "environment": "simulated",
+  "rps": 2,
+  "maxInFlight": 3,
+  "peakInFlight": 2,
+  "nationalRegistrySegments": 6289,
+  "sampleRequests": 38,
+  "stats": {
+    "requests": 38,
+    "bytes": 2351833,
+    "unchanged": 18,
+    "errors": 0
+  },
+  "spacing": {
+    "n": 37,
+    "p50": 518.7963000000018,
+    "p95": 547.6048999999994,
+    "p99": 1238.7474000000002,
+    "max": 1238.7474000000002,
+    "mean": 538.5812486486487
+  },
+  "latency": {
+    "n": 38,
+    "p50": 140.5586000000003,
+    "p95": 1038.8617,
+    "p99": 1234.7732999999998,
+    "max": 1234.7732999999998,
+    "mean": 263.20622894736834
+  },
+  "aggregateSnapshots": {
+    "n": 2
+  },
+  "records": [
+    {
+      "key": "ea11",
+      "kind": "tracking",
+      "url": "https://resultados-sim.tse.jus.br/simulado/simulado2026/comum/config/ele-c.json",
+      "startMs": 385.7777,
+      "elapsedMs": 1234.7732999999998,
+      "status": 200,
+      "bytes": 1857,
+      "conditional": false
+    },
+    {
+      "key": "ea12",
+      "kind": "tracking",
+      "url": "https://resultados-sim.tse.jus.br/simulado/simulado2026/ele2026/21270/config/mun-e021270-cm.json",
+      "startMs": 1624.5251,
+      "elapsedMs": 302.32299999999987,
+      "status": 200,
+      "bytes": 534069,
+      "conditional": false
+    },
+    {
+      "key": "aggregate:ac",
+      "kind": "aggregate",
+      "url": "https://resultados-sim.tse.jus.br/simulado/simulado2026/ele2026/21270/dados/ac/ac-c0001-e021270-u.json",
+      "startMs": 2137.1915,
+      "elapsedMs": 208.08069999999998,
+      "status": 200,
+      "bytes": 10021,
+      "conditional": false
+    },
+    {
+      "key": "aggregate:ac",
+      "kind": "aggregate",
+      "url": "https://resultados-sim.tse.jus.br/simulado/simulado2026/ele2026/21270/dados/ac/ac-c0001-e021270-u.json",
+      "startMs": 3179.675,
+      "elapsedMs": 93.73589999999967,
+      "status": 304,
+      "bytes": 0,
+      "conditional": true
+    },
+    {
+      "key": "aggregate:br",
+      "kind": "aggregate",
+      "url": "https://resultados-sim.tse.jus.br/simulado/simulado2026/ele2026/21270/dados/br/br-c0001-e021270-u.json",
+      "startMs": 2670.6036,
+      "elapsedMs": 1038.8617,
+      "status": 200,
+      "bytes": 10059,
+      "conditional": false
+    },
+    {
+      "key": "ea14",
+      "kind": "tracking",
+      "url": "https://resultados-sim.tse.jus.br/simulado/simulado2026/ele2026/21270/dados/br/br-e021270-ab.json",
+      "startMs": 3683.6588,
+      "elapsedMs": 68.55279999999993,
+      "status": 200,
+      "bytes": 29413,
+      "conditional": false
+    },
+    {
+      "key": "ea15:ac",
+      "kind": "tracking",
+      "url": "https://resultados-sim.tse.jus.br/simulado/simulado2026/ele2026/21270/dados/ac/ac-e021270-ab.json",
+      "startMs": 4202.9136,
+      "elapsedMs": 211.83190000000013,
+      "status": 200,
+      "bytes": 19441,
+      "conditional": false
+    },
+    {
+      "key": "aggregate:br",
+      "kind": "aggregate",
+      "url": "https://resultados-sim.tse.jus.br/simulado/simulado2026/ele2026/21270/dados/br/br-c0001-e021270-u.json",
+      "startMs": 4738.7165,
+      "elapsedMs": 40.258199999999306,
+      "status": 304,
+      "bytes": 0,
+      "conditional": true
+    },
+    {
+      "key": "ea15:am",
+      "kind": "tracking",
+      "url": "https://resultados-sim.tse.jus.br/simulado/simulado2026/ele2026/21270/dados/am/am-e021270-ab.json",
+      "startMs": 5256.6721,
+      "elapsedMs": 188.32080000000042,
+      "status": 200,
+      "bytes": 52775,
+      "conditional": false
+    },
+    {
+      "key": "ea15:ba",
+      "kind": "tracking",
+      "url": "https://resultados-sim.tse.jus.br/simulado/simulado2026/ele2026/21270/dados/ba/ba-e021270-ab.json",
+      "startMs": 5790.5856,
+      "elapsedMs": 273.5499999999993,
+      "status": 200,
+      "bytes": 348278,
+      "conditional": false
+    },
+    {
+      "key": "ea15:mg",
+      "kind": "tracking",
+      "url": "https://resultados-sim.tse.jus.br/simulado/simulado2026/ele2026/21270/dados/mg/mg-e021270-ab.json",
+      "startMs": 6318.6674,
+      "elapsedMs": 534.2878000000001,
+      "status": 200,
+      "bytes": 709057,
+      "conditional": false
+    },
+    {
+      "key": "ac:01120:0008",
+      "kind": "zone",
+      "url": "https://resultados-sim.tse.jus.br/simulado/simulado2026/ele2026/21270/dados/ac/ac01120-z0008-c0001-e021270-u.json",
+      "startMs": 6866.2723,
+      "elapsedMs": 563.6220000000003,
+      "status": 200,
+      "bytes": 9903,
+      "conditional": false
+    },
+    {
+      "key": "ea15:sp",
+      "kind": "tracking",
+      "url": "https://resultados-sim.tse.jus.br/simulado/simulado2026/ele2026/21270/dados/sp/sp-e021270-ab.json",
+      "startMs": 7390.6235,
+      "elapsedMs": 629.9656000000004,
+      "status": 200,
+      "bytes": 537422,
+      "conditional": false
+    },
+    {
+      "key": "ea14",
+      "kind": "tracking",
+      "url": "https://resultados-sim.tse.jus.br/simulado/simulado2026/ele2026/21270/dados/br/br-e021270-ab.json",
+      "startMs": 7918.5753,
+      "elapsedMs": 114.29039999999986,
+      "status": 304,
+      "bytes": 0,
+      "conditional": true
+    },
+    {
+      "key": "ea15:ac",
+      "kind": "tracking",
+      "url": "https://resultados-sim.tse.jus.br/simulado/simulado2026/ele2026/21270/dados/ac/ac-e021270-ab.json",
+      "startMs": 8426.273,
+      "elapsedMs": 49.02440000000024,
+      "status": 304,
+      "bytes": 0,
+      "conditional": true
+    },
+    {
+      "key": "ac:01392:0009",
+      "kind": "zone",
+      "url": "https://resultados-sim.tse.jus.br/simulado/simulado2026/ele2026/21270/dados/ac/ac01392-z0009-c0001-e021270-u.json",
+      "startMs": 8958.7785,
+      "elapsedMs": 443.1926999999996,
+      "status": 200,
+      "bytes": 9968,
+      "conditional": false
+    },
+    {
+      "key": "ea15:am",
+      "kind": "tracking",
+      "url": "https://resultados-sim.tse.jus.br/simulado/simulado2026/ele2026/21270/dados/am/am-e021270-ab.json",
+      "startMs": 9493.5475,
+      "elapsedMs": 39.23139999999876,
+      "status": 304,
+      "bytes": 0,
+      "conditional": true
+    },
+    {
+      "key": "ea15:ba",
+      "kind": "tracking",
+      "url": "https://resultados-sim.tse.jus.br/simulado/simulado2026/ele2026/21270/dados/ba/ba-e021270-ab.json",
+      "startMs": 10011.2675,
+      "elapsedMs": 43.03930000000037,
+      "status": 304,
+      "bytes": 0,
+      "conditional": true
+    },
+    {
+      "key": "ea15:mg",
+      "kind": "tracking",
+      "url": "https://resultados-sim.tse.jus.br/simulado/simulado2026/ele2026/21270/dados/mg/mg-e021270-ab.json",
+      "startMs": 10523.0887,
+      "elapsedMs": 35.34889999999905,
+      "status": 304,
+      "bytes": 0,
+      "conditional": true
+    },
+    {
+      "key": "ea15:sp",
+      "kind": "tracking",
+      "url": "https://resultados-sim.tse.jus.br/simulado/simulado2026/ele2026/21270/dados/sp/sp-e021270-ab.json",
+      "startMs": 11528.8459,
+      "elapsedMs": 37.213299999999435,
+      "status": 304,
+      "bytes": 0,
+      "conditional": true
+    },
+    {
+      "key": "am:02550:0062",
+      "kind": "zone",
+      "url": "https://resultados-sim.tse.jus.br/simulado/simulado2026/ele2026/21270/dados/am/am02550-z0062-c0001-e021270-u.json",
+      "startMs": 11027.0538,
+      "elapsedMs": 739.2375000000011,
+      "status": 200,
+      "bytes": 9974,
+      "conditional": false
+    },
+    {
+      "key": "am:02895:0060",
+      "kind": "zone",
+      "url": "https://resultados-sim.tse.jus.br/simulado/simulado2026/ele2026/21270/dados/am/am02895-z0060-c0001-e021270-u.json",
+      "startMs": 12047.0652,
+      "elapsedMs": 587.6433000000015,
+      "status": 200,
+      "bytes": 9912,
+      "conditional": false
+    },
+    {
+      "key": "ba:33030:0158",
+      "kind": "zone",
+      "url": "https://resultados-sim.tse.jus.br/simulado/simulado2026/ele2026/21270/dados/ba/ba33030-z0158-c0001-e021270-u.json",
+      "startMs": 12555.0655,
+      "elapsedMs": 329.6126999999997,
+      "status": 200,
+      "bytes": 9918,
+      "conditional": false
+    },
+    {
+      "key": "ba:33634:0070",
+      "kind": "zone",
+      "url": "https://resultados-sim.tse.jus.br/simulado/simulado2026/ele2026/21270/dados/ba/ba33634-z0070-c0001-e021270-u.json",
+      "startMs": 13074.1859,
+      "elapsedMs": 299.35119999999915,
+      "status": 200,
+      "bytes": 9961,
+      "conditional": false
+    },
+    {
+      "key": "mg:40010:0096",
+      "kind": "zone",
+      "url": "https://resultados-sim.tse.jus.br/simulado/simulado2026/ele2026/21270/dados/mg/mg40010-z0096-c0001-e021270-u.json",
+      "startMs": 13604.5539,
+      "elapsedMs": 204.3867999999984,
+      "status": 200,
+      "bytes": 9908,
+      "conditional": false
+    },
+    {
+      "key": "mg:41238:0028",
+      "kind": "zone",
+      "url": "https://resultados-sim.tse.jus.br/simulado/simulado2026/ele2026/21270/dados/mg/mg41238-z0028-c0001-e021270-u.json",
+      "startMs": 14129.679,
+      "elapsedMs": 191.98040000000037,
+      "status": 200,
+      "bytes": 9973,
+      "conditional": false
+    },
+    {
+      "key": "sp:61018:0157",
+      "kind": "zone",
+      "url": "https://resultados-sim.tse.jus.br/simulado/simulado2026/ele2026/21270/dados/sp/sp61018-z0157-c0001-e021270-u.json",
+      "startMs": 14630.9554,
+      "elapsedMs": 514.521999999999,
+      "status": 200,
+      "bytes": 9958,
+      "conditional": false
+    },
+    {
+      "key": "sp:61310:0158",
+      "kind": "zone",
+      "url": "https://resultados-sim.tse.jus.br/simulado/simulado2026/ele2026/21270/dados/sp/sp61310-z0158-c0001-e021270-u.json",
+      "startMs": 15131.1375,
+      "elapsedMs": 430.71659999999974,
+      "status": 200,
+      "bytes": 9966,
+      "conditional": false
+    },
+    {
+      "key": "ac:01120:0008",
+      "kind": "zone",
+      "url": "https://resultados-sim.tse.jus.br/simulado/simulado2026/ele2026/21270/dados/ac/ac01120-z0008-c0001-e021270-u.json",
+      "startMs": 15661.2632,
+      "elapsedMs": 140.5586000000003,
+      "status": 304,
+      "bytes": 0,
+      "conditional": true
+    },
+    {
+      "key": "ac:01392:0009",
+      "kind": "zone",
+      "url": "https://resultados-sim.tse.jus.br/simulado/simulado2026/ele2026/21270/dados/ac/ac01392-z0009-c0001-e021270-u.json",
+      "startMs": 16197.3429,
+      "elapsedMs": 41.94710000000123,
+      "status": 304,
+      "bytes": 0,
+      "conditional": true
+    },
+    {
+      "key": "am:02550:0062",
+      "kind": "zone",
+      "url": "https://resultados-sim.tse.jus.br/simulado/simulado2026/ele2026/21270/dados/am/am02550-z0062-c0001-e021270-u.json",
+      "startMs": 16739.2464,
+      "elapsedMs": 28.081099999999424,
+      "status": 304,
+      "bytes": 0,
+      "conditional": true
+    },
+    {
+      "key": "am:02895:0060",
+      "kind": "zone",
+      "url": "https://resultados-sim.tse.jus.br/simulado/simulado2026/ele2026/21270/dados/am/am02895-z0060-c0001-e021270-u.json",
+      "startMs": 17231.2894,
+      "elapsedMs": 37.99989999999889,
+      "status": 304,
+      "bytes": 0,
+      "conditional": true
+    },
+    {
+      "key": "ba:33030:0158",
+      "kind": "zone",
+      "url": "https://resultados-sim.tse.jus.br/simulado/simulado2026/ele2026/21270/dados/ba/ba33030-z0158-c0001-e021270-u.json",
+      "startMs": 17732.0536,
+      "elapsedMs": 61.60020000000077,
+      "status": 304,
+      "bytes": 0,
+      "conditional": true
+    },
+    {
+      "key": "ba:33634:0070",
+      "kind": "zone",
+      "url": "https://resultados-sim.tse.jus.br/simulado/simulado2026/ele2026/21270/dados/ba/ba33634-z0070-c0001-e021270-u.json",
+      "startMs": 18266.8836,
+      "elapsedMs": 58.28849999999875,
+      "status": 304,
+      "bytes": 0,
+      "conditional": true
+    },
+    {
+      "key": "mg:40010:0096",
+      "kind": "zone",
+      "url": "https://resultados-sim.tse.jus.br/simulado/simulado2026/ele2026/21270/dados/mg/mg40010-z0096-c0001-e021270-u.json",
+      "startMs": 18767.388,
+      "elapsedMs": 45.23860000000059,
+      "status": 304,
+      "bytes": 0,
+      "conditional": true
+    },
+    {
+      "key": "mg:41238:0028",
+      "kind": "zone",
+      "url": "https://resultados-sim.tse.jus.br/simulado/simulado2026/ele2026/21270/dados/mg/mg41238-z0028-c0001-e021270-u.json",
+      "startMs": 19286.1843,
+      "elapsedMs": 53.92870000000039,
+      "status": 304,
+      "bytes": 0,
+      "conditional": true
+    },
+    {
+      "key": "sp:61018:0157",
+      "kind": "zone",
+      "url": "https://resultados-sim.tse.jus.br/simulado/simulado2026/ele2026/21270/dados/sp/sp61018-z0157-c0001-e021270-u.json",
+      "startMs": 19800.6103,
+      "elapsedMs": 33.13090000000011,
+      "status": 304,
+      "bytes": 0,
+      "conditional": true
+    },
+    {
+      "key": "sp:61310:0158",
+      "kind": "zone",
+      "url": "https://resultados-sim.tse.jus.br/simulado/simulado2026/ele2026/21270/dados/sp/sp61310-z0158-c0001-e021270-u.json",
+      "startMs": 20313.2839,
+      "elapsedMs": 54.108500000002095,
+      "status": 304,
+      "bytes": 0,
+      "conditional": true
+    }
+  ]
+}

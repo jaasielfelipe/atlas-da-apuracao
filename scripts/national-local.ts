@@ -61,11 +61,14 @@ try {
     throughput: 300 / (wallMs / 1000),
     tickMs: summarize(elapsed),
     assumptions:
-      '300 corpos 200 idênticos reaproveitados, gate temporal avançado virtualmente; normalização real do mesmo corpo, seleção/duas gravações integrais/cache/observação SQLite reais; sem latência HTTP e sem snapshots normalizados nacionais',
+      '300 corpos 200 idênticos reaproveitados, gate temporal avançado virtualmente; normalização real do mesmo corpo, seleção/gravações incrementais/cache/observação SQLite reais; sem latência HTTP e sem snapshots normalizados nacionais',
     bodyCount: store.db.prepare('SELECT COUNT(*) n FROM collector_body').get(),
     observations: store.db.prepare('SELECT COUNT(*) n FROM collector_observation').get(),
   };
-  writeFileSync('docs/evidence/national/local-pipeline.json', JSON.stringify(result, null, 2));
+  writeFileSync(
+    process.env.BENCH_OUTPUT ?? 'docs/evidence/national/local-pipeline-optimized.json',
+    JSON.stringify(result, null, 2),
+  );
   console.log(result);
 } finally {
   store.close();

@@ -7,7 +7,7 @@ export function tseTransport(options: {
   timeoutMs?: number;
   maxBytes?: number;
   now?: () => number;
-  validate: (raw: string, job: Readonly<CollectJob>) => void;
+  validate: (raw: string, job: Readonly<CollectJob>) => void | { complete: boolean };
 }) {
   const request = options.fetch ?? fetch,
     max = options.maxBytes ?? 4 * 1024 * 1024;
@@ -64,7 +64,7 @@ export function tseTransport(options: {
     const raw = new TextDecoder('utf-8', { fatal: true }).decode(Buffer.concat(chunks));
     const body = JSON.parse(raw);
     validatePhase(body.f, environment);
-    options.validate(raw, job);
-    return { ...result, raw };
+    const validated = options.validate(raw, job);
+    return { ...result, raw, ...(validated ?? {}) };
   };
 }

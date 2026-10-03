@@ -1,4 +1,6 @@
 import { gzipSync, gunzipSync } from 'node:zlib';
+import { randomUUID } from 'node:crypto';
+import { setTimeout as sleep } from 'node:timers/promises';
 import type { Store } from '../db/store';
 import { ConservativeCollector, type CollectJob } from '../../../../packages/tse/src/collector';
 import { rawDigest } from '../../../../packages/tse/src/index';
@@ -7,11 +9,20 @@ import type { HttpResult } from '../../../../packages/tse/src/http';
 /** Explicitly driven service, no background timer and no activation from the fixture application. */
 export class PersistentCollector {
   readonly queue: ConservativeCollector;
+  private readonly owner = randomUUID();
+  private running = false;
   constructor(
     readonly store: Store,
     readonly now = () => Date.now(),
+    options: { intervalMs?: number; maxInFlight?: number; pollMs?: number; auditMs?: number } = {},
   ) {
-    this.queue = new ConservativeCollector(500, 60_000, now);
+    this.queue = new ConservativeCollector(
+      options.intervalMs ?? 500,
+      options.pollMs ?? 60_000,
+      now,
+      options.maxInFlight ?? 2,
+      options.auditMs ?? 600_000,
+    );
     const db = store.db;
     const state = db
       .prepare(
@@ -48,9 +59,10 @@ export class PersistentCollector {
     }
   }
   save() {
-    const state = this.queue.snapshot(),
+    const state = this.queue.snapshot(true),
       db = this.store.db;
     db.transaction(() => {
+      this.assertOwner();
       db.prepare(
         `INSERT INTO collector_state VALUES('global',?,?,?,?,?,?) ON CONFLICT(id) DO UPDATE SET next_request=excluded.next_request,turn=excluded.turn,requests=excluded.requests,bytes=excluded.bytes,unchanged=excluded.unchanged,errors=excluded.errors`,
       ).run(
@@ -67,6 +79,14 @@ export class PersistentCollector {
       for (const job of state.jobs)
         upsert.run(job.key, JSON.stringify(job), Number(state.missing.includes(job.key)));
     })();
+    this.queue.persisted();
+  }
+  private assertOwner() {
+    const lease = this.store.db.prepare('SELECT owner FROM collector_owner WHERE id=1').get() as
+      | { owner: string }
+      | undefined;
+    if (lease && lease.owner !== this.owner)
+      throw Error('Outro coletor possui o orçamento deste banco');
   }
   cached(key: string) {
     const r = this.store.db
@@ -76,9 +96,71 @@ export class PersistentCollector {
       .get(key) as { compressed: Buffer } | undefined;
     return r ? gunzipSync(r.compressed).toString('utf8') : null;
   }
+  /** Last accepted body known at the requested instant; failed/304 checks never erase it. */
+  captured(key: string, at: string) {
+    const row = this.store.db
+      .prepare(
+        `SELECT b.compressed FROM collector_observation o JOIN collector_body b ON b.digest=o.digest WHERE o.job_key=? AND o.completed_at<=? AND o.status=200 ORDER BY o.completed_at DESC,o.id DESC LIMIT 1`,
+      )
+      .get(key, at) as { compressed: Buffer } | undefined;
+    return row ? gunzipSync(row.compressed).toString('utf8') : null;
+  }
+  /** One production loop per database. All feeds MUST be registered in this same service. */
+  async run(transport: Parameters<PersistentCollector['tick']>[0], signal: AbortSignal) {
+    if (this.running) throw Error('Coletor já em execução');
+    const acquire = () => {
+      this.store.db
+        .transaction(() => {
+          const state = this.store.db
+            .prepare("SELECT requests FROM collector_state WHERE id='global'")
+            .get() as { requests: number } | undefined;
+          if (state && state.requests !== this.queue.stats.requests)
+            throw Error('Estado desatualizado; reconstruir coletor antes de adquirir orçamento');
+          const result = this.store.db
+            .prepare(
+              `INSERT INTO collector_owner VALUES(1,?,?) ON CONFLICT(id) DO UPDATE SET owner=excluded.owner,expires=excluded.expires WHERE collector_owner.owner=excluded.owner OR collector_owner.expires<=?`,
+            )
+            .run(this.owner, this.now() + 60_000, this.now());
+          if (!result.changes) throw Error('Outro coletor possui o orçamento deste banco');
+        })
+        .immediate();
+    };
+    acquire();
+    this.running = true;
+    const active = new Set<Promise<unknown>>();
+    let failure: unknown;
+    let renewed = this.now();
+    try {
+      this.save();
+      while (!signal.aborted && !failure) {
+        if (this.now() - renewed >= 5000) {
+          acquire();
+          renewed = this.now();
+        }
+        const pending = this.tick(transport)
+          .catch((error) => {
+            failure = error;
+          })
+          .finally(() => active.delete(pending));
+        active.add(pending);
+        await sleep(25);
+      }
+      await Promise.all(active);
+      if (failure) throw failure;
+    } finally {
+      await Promise.allSettled(active);
+      this.store.db.prepare('DELETE FROM collector_owner WHERE id=1 AND owner=?').run(this.owner);
+      this.running = false;
+    }
+  }
   async tick(
     transport: (job: Readonly<CollectJob>, headers: Record<string, string>) => Promise<HttpResult>,
   ) {
+    const lease = this.store.db
+      .prepare('SELECT owner,expires FROM collector_owner WHERE id=1')
+      .get() as { owner: string; expires: number } | undefined;
+    if (lease && lease.owner !== this.owner && lease.expires > this.now())
+      throw Error('Outro coletor possui o orçamento deste banco');
     const started = this.now();
     const result = await this.queue.tick(started, async (job, headers) => {
       // Persist consumed budget before issuing HTTP; a crash must not reset request allowance.
@@ -106,6 +188,7 @@ export class PersistentCollector {
       const completed = new Date(this.now()).toISOString(),
         digest = response.raw === undefined ? null : rawDigest(response.raw);
       this.store.db.transaction(() => {
+        this.assertOwner();
         if (digest && response.raw !== undefined) {
           this.store.db
             .prepare('INSERT OR IGNORE INTO collector_body VALUES(?,?)')
@@ -134,7 +217,7 @@ export class PersistentCollector {
       })();
       return response;
     });
-    this.save();
+    if (result) this.save();
     return result;
   }
 }

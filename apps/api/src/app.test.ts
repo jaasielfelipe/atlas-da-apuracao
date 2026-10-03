@@ -113,7 +113,7 @@ describe('Etapa 1: SQLite e API local em fixture', () => {
     );
     expect(() => store.db.exec('UPDATE zone_result SET valid=0')).toThrow('imutáveis');
     expect(() => store.db.exec('DELETE FROM zone_candidate_vote')).toThrow('imutáveis');
-    expect(store.db.pragma('user_version', { simple: true })).toBe(4);
+    expect(store.db.pragma('user_version', { simple: true })).toBe(5);
   });
   it('WAL persiste snapshots, favoritos e cursor após reinício sem duplicação', async () => {
     const directory = mkdtempSync(join(tmpdir(), 'atlas-test-'));

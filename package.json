@@ -22,6 +22,8 @@
     "simulate:national": "tsx scripts/national-simulation.ts",
     "report:national": "tsx scripts/national-report.ts",
     "benchmark:local-national": "tsx scripts/national-local.ts",
+    "benchmark:concurrent": "tsx scripts/national-concurrent.ts",
+    "reconcile:national": "tsx scripts/national-reconciliation.ts",
     "observe:tse": "node scripts/observe-tse.mjs",
     "inspect:history": "tsx scripts/inspect-history.ts",
     "import:history": "tsx scripts/import-history.ts",
