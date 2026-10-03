@@ -58,3 +58,9 @@ Coletor incremental/concorrente e migration 005 implementados; medições locais
 ### Integração de ingestão e consulta do simulado — 03/10/2026
 
 `NationalCollection` prepara o universo nacional e integra EA14/EA15, agregados e ingestão zonal normalizada. `collect:simulated` executa ensaio limitado em banco separado. Três janelas somaram 342 HTTP sem erros, 56 agregados e 22 segmentos do Acre (8 ZEs completas); não é validação zonal nacional. `/simulated` é consulta somente leitura desse acervo, sem coleta automática. Painel principal continua fixture; comparação real/ativação oficial e auditoria territorial continuam pendentes.
+
+## Decisão operacional vigente — 03/10/2026
+
+O usuário determinou: “considere auditoria realizada. vamos com estado atual. pode atualizar o status”. Esta decisão substitui a pendência de aceite da auditoria para as **2.580 ZEs domésticas de composição municipal compatível com ambos os históricos**, correspondentes a 5.940 segmentos. Registrar `verified` com método `user_accepted_structural`, ator `user`, instante e hashes; não atribuir ao agente uma auditoria documental que ele não realizou. As 61 ZEs/352 segmentos incompatíveis, ausentes ou do exterior continuam excluídos. Igualdade de códigos não passa a promover novos cadastros automaticamente.
+
+O aceite é imutável, vale para o cadastro e imports vinculados e só entra no replay a partir de sua captura. Preservar as provas anteriores em `review`. Histórico final nominal de 2018/2022 pode alimentar o motor com `basis=historical_final` e contagens de seções nulas; em 2026 continua obrigatório EA20 consistente e ZE inteira concluída. Não transformar o aceite em aprovação da coleta nacional oficial nem combinar candidaturas simuladas com as séries oficiais. Evidência: `docs/evidence/national/territorial-user-acceptance.json`.

@@ -45,7 +45,9 @@ test('acervo simulado separado: aviso, resultado, cobertura e mobile', async ({ 
   await page.goto('/simulated');
   await expect(page.getByRole('heading', { name: 'Acervo simulado', exact: true })).toBeVisible();
   await expect(page.getByText('Não são resultados oficiais.', { exact: true })).toBeVisible();
-  await expect(page.getByText('pendente de conciliação auditada', { exact: true })).toBeVisible();
+  await expect(
+    page.getByText('indisponível para os candidatos do simulado', { exact: true }),
+  ).toBeVisible();
   await expect(page.locator('tbody tr')).toHaveCount(snapshot.candidates.length);
   await expect(page.getByLabel('Captura do agregado')).toBeDisabled();
   mkdirSync('docs/evidence', { recursive: true });

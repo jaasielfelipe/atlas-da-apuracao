@@ -39,3 +39,7 @@ Repositório: `jaasielfelipe/atlas-da-apuracao`. Primeiro fluxo fixture, SQLite 
 6. Operação: migração/reinício/falhas/replay testados, backup consistente executado. Aceite de operação oficial pendente.
 
 Registro final desta execução: **41 testes + 1 E2E**, build/typecheck/format aprovados. Evidências e limites detalhados em `VALIDACAO.md`; continuidade em `OPERACAO.md`. Sem recorrência adicional.
+
+## Continuidade após aceite territorial — 03/10/2026
+
+Aceite operacional do usuário registrado para 2.580 ZEs/5.940 segmentos. O adaptador `attachAcceptedHistory` liga imports nominais reais e auditorias imutáveis ao motor; respeita corte temporal e não inventa contagens de seções históricas. Prova offline nacional executada, com amostra oficial atual parcial e nenhuma ZE completa/comparável. Próximo incremento: acervo/API oficial separado e coleta controlada com prioridade de agregados, seguido da integração cartográfica e ensaios prolongados. Auditoria aceita não deve voltar a ser apresentada como dependência pendente para esse mesmo estado.

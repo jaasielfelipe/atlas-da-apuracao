@@ -24,6 +24,7 @@
     "benchmark:local-national": "tsx scripts/national-local.ts",
     "benchmark:concurrent": "tsx scripts/national-concurrent.ts",
     "reconcile:national": "tsx scripts/national-reconciliation.ts",
+    "accept:territorial-audit": "tsx scripts/accept-territorial-audit.ts",
     "collect:simulated": "tsx scripts/collect-simulated.ts",
     "observe:tse": "node scripts/observe-tse.mjs",
     "inspect:history": "tsx scripts/inspect-history.ts",

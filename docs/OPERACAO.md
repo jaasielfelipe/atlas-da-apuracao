@@ -61,3 +61,11 @@ Consulte `OTIMIZACAO_COLETA_NACIONAL.md` para parâmetros medidos, cadências e 
 - Fila nacional está integrada ao adapter normalizado, mas o ensaio real avançou somente 22 segmentos do Acre. Os históricos continuam fora da coorte real. Renovação cadastral e mudanças de favoritos exigem reconstruir o plano; não promover automaticamente vínculos históricos.
 
 Medições, limitações e evidências em `VALIDACAO.md`, seção de ingestão nacional integrada.
+
+## Estado após decisão do usuário — 03/10/2026
+
+Auditoria aceita operacionalmente pelo usuário para 2.580 ZEs/5.940 segmentos domésticos compatíveis (94,41% das 6.292 unidades); 1.586 ZEs exigem agregar vários segmentos. Persistidos novos `territorial_audit` verified, método `user_accepted_structural`; preservadas provas anteriores. 61 ZEs/352 segmentos excluídos. Não pendurar a ativação no aceite novamente; os bloqueios restantes são técnicos e de disponibilidade de dados completos.
+
+`pnpm accept:territorial-audit` reproduz a decisão já registrada, sem rede: verifica hashes locais/candidatos, faz backup SQLite e anexa os históricos finais ao motor. A evidência versionada fixa o instante original do aceite. Não usar o comando como aceitação automática de novos cadastros. O banco continua em `data/history/atlas-history.sqlite`; imports mantêm seu status original de ingestão imutável, e o estado efetivo está nos registros de auditoria.
+
+Próximas etapas: integrar o adaptador ao acervo/API oficial separado; habilitar coleta oficial controlada com a mesma cota global 2 req/s e 2 em voo; verificar publicação/completude e ensaiar frescor nacional. A amostra oficial existente é parcial, portanto coorte observada continua vazia. Agregados permanecem independentes. O painel simulado continua consulta de acervo e não permite comparar candidatos simulados às séries políticas oficiais.

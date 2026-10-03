@@ -1,0 +1,36 @@
+{
+  "approval": {
+    "id": "user-decision-2026-10-03-territorial-audit",
+    "capturedAt": "2026-10-03T21:14:53.310Z",
+    "registryDigest": "95a5a0a7530a494e510baf6da17b048d234ec424af47a9c5c80ec4468e351d75",
+    "import2018": "2018:c495390fbb87d6c59374570fd9b81adebf19e983a5d3329bb1e82cdcd91c28ac",
+    "import2022": "2022:2698d64e4b248a4b59de40eadcdbbc4a6a18d38f8baefa46b780ed7d634c001b",
+    "actor": "user",
+    "statement": "decisão: considere auditoria realizada. vamos com estado atual. pode atualizar o status. siga para os próximos passos."
+  },
+  "method": "user_accepted_structural",
+  "documentaryAuditByAgent": false,
+  "acceptedZones": 2580,
+  "acceptedSegments": 5940,
+  "excludedZones": 61,
+  "multiSegmentZones": 1586,
+  "excludedSegments": 352,
+  "acceptancePercent": 94.4055944055944,
+  "attachedMatches": 5940,
+  "historicalResults": 12523,
+  "validHistoricalResults": 12480,
+  "officialSample": {
+    "capturedAt": "2026-10-03T00:03:08.697Z",
+    "sourceUrl": "https://resultados.tse.jus.br/oficial/ele2026/6257/dados/ac/ac01120-z0008-c0001-e006257-u.json",
+    "digest": "0f5feac5f2dd8c37d03774904121567eb0d298693f2bf3fe677c365e7c4f9232",
+    "status": "partial"
+  },
+  "comparisonCoverage": {
+    "expected": 2641,
+    "completed": 0,
+    "comparable": 0
+  },
+  "nationalOfficialCollectionValidated": false,
+  "integrity": "ok",
+  "backup": "data/backups/history-before-user-audit-2026-10-03T21-14-53.507Z.sqlite"
+}

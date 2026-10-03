@@ -358,3 +358,7 @@ No repositório, integrar este aditivo sem apagar o histórico documental:
 ---
 
 **Resumo operacional:** coletar resultados EA20 por município–zona em escala nacional progressiva; completar a ZE inteira somente após todas as suas partes; construir uma coorte comum conciliada com 2018 e 2022; calcular participações, lideranças e matrizes de transição para as duas séries definidas; mostrar contagens e mudanças de liderança diretamente, com invariantes algébricos, sem interpretações nem projeções.
+
+## Registro posterior de decisão do usuário — 03/10/2026
+
+O usuário autorizou considerar realizada a auditoria do estado atual. Para esse cadastro e esses imports, o aceite operacional é registrado como `verified`/`user_accepted_structural` nas ZEs domésticas de composição compatível, com ator, declaração, horário e hashes. Não representa auditoria documental executada pelo agente. Mantêm-se excluídas divergências, ausências e ZZ; continuam obrigatórias a conclusão integral atual, a coorte comum e as demais invariantes. Detalhes em `ESPECIFICACAO.md`, seção 19, e `evidence/national/territorial-user-acceptance.json`.

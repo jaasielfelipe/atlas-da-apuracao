@@ -221,3 +221,12 @@ Evidências e parâmetros: `OTIMIZACAO_COLETA_NACIONAL.md`.
 - EA15 dispara pistas por segmento; hashes persistem. Primeira pista não reconsulta agregado já capturado, mas mudança posterior o antecipa. Bootstrap dirigido mantém a cota sem suspender a fila nacional.
 - Cobertura de ZE requer todos os segmentos normalizados completos; 22 segmentos capturados no ensaio não viram 22 ZEs nem correspondências históricas verificadas.
 - `/api/v1/simulated/*` lê banco separado, não cria dados, respeita corte temporal e nunca substitui `/api/v1/latest` fixture. `/simulated` não inicia coleta e mantém última captura visível se atualização falhar.
+
+## Contratos adicionais — aceite territorial do usuário
+
+- Aceite explícito, imutável e idempotente, ligado a cadastro e dois imports; ator e declaração preservados. Mudança da declaração com mesmo ID falha. Manter registros anteriores.
+- Promover apenas ZE doméstica com composição completa igual nos três anos. Divergência, ausência e ZZ não entram. Nenhuma aceitação automática de versão cadastral nova.
+- Replay anterior ao aceite não usa matches posteriores. Ambiguidade de auditorias no mesmo instante falha; versão histórica divergente entre auditorias falha.
+- Históricos finais 2018/2022 usam votos nominais e seções nulas; preservar todos os candidatos, zeros, denominador e fonte. `historical_final` em 2026 é inválido e não contorna conclusão EA20.
+- Adaptador histórico rejeita ambiente simulado/fixture e resultados atuais de outro ano/ambiente. Mapping ausente produz coorte vazia sem exceção de acesso a campo indefinido.
+- Aceite territorial não muda disponibilidade do agregado e não transforma candidatura simulada em identidade oficial.

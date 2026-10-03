@@ -17,9 +17,10 @@ export type ZoneResult = ZoneSegment & {
   sourceUrl: string;
   sourceDigest: string;
   status: 'complete' | 'partial' | 'needs_review';
-  total: number;
-  totalized: number;
-  notTotalized: number;
+  basis?: 'ea20' | 'historical_final';
+  total: number | null;
+  totalized: number | null;
+  notTotalized: number | null;
   valid: number | null;
   candidates: { id: string; votes: number }[];
 };
@@ -50,10 +51,16 @@ export function validResult(r: ZoneResult) {
   return (
     r.round === '1' &&
     r.status === 'complete' &&
-    safe(r.total) &&
-    r.total > 0 &&
-    r.totalized === r.total &&
-    r.notTotalized === 0 &&
+    (r.basis === 'historical_final'
+      ? (r.year === 2018 || r.year === 2022) &&
+        r.total === null &&
+        r.totalized === null &&
+        r.notTotalized === null
+      : r.total !== null &&
+        safe(r.total) &&
+        r.total > 0 &&
+        r.totalized === r.total &&
+        r.notTotalized === 0) &&
     r.valid !== null &&
     safe(r.valid) &&
     r.valid > 0 &&
@@ -90,7 +97,7 @@ function aggregate(rows: ZoneResult[], mapping: ZoneDataset['mappings'][Year]) {
   const valid = rows.reduce((n, r) => n + r.valid!, 0);
   if (
     !safe(valid) ||
-    !mapping.bolsonaro ||
+    !mapping?.bolsonaro ||
     !mapping.lula_haddad ||
     mapping.bolsonaro === mapping.lula_haddad ||
     !votes.has(mapping.bolsonaro) ||

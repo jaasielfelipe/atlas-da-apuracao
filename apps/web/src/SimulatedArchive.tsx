@@ -103,8 +103,9 @@ export default function SimulatedArchive() {
           </div>
         </dl>
         <p>
-          Comparação histórica: <strong>pendente de conciliação auditada</strong>. Zona concluída
-          não significa zona comparável. Não há estimativa para zonas parciais.
+          Comparação histórica: <strong>indisponível para os candidatos do simulado</strong>. O
+          aceite territorial do ambiente oficial não vincula candidaturas simuladas às séries
+          históricas. Não há estimativa para zonas parciais.
         </p>
       </section>
       <section aria-label="Resultado agregado do simulado">

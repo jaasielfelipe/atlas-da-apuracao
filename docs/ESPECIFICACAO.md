@@ -864,3 +864,9 @@ Históricos nominais BR de 2018/2022 foram lidos em Windows-1252, com primeiro t
 | 1.1 — 02/10/2026 | Integra Aditivo 01: §§1.1/1.2, 3.1, 4.1–4.4, 5.1 modo B e 5.2–5.5; alinha princípios, fontes históricas, topologia, persistência, scheduler, API, UI, aceite, roadmap e riscos | Migração documental e estado de indisponibilidade; cálculo/coleta/conciliação nacional zonal ainda pendentes, não comprovados por fixtures do primeiro fluxo |
 
 Vigente: EA20 município–zona → ZE inteira concluída → coorte verificada nos dois históricos → contagens/lideranças/matrizes. Preservados: stack, execução local, isolamento de ambientes, agregados municipais somente salvos, mapa municipal, snapshots imutáveis, resultado/cobertura/timeline e observações TSE anteriores. Aditivo original mantido sem alteração.
+
+## 19. Decisão operacional de auditoria — 03/10/2026
+
+Por instrução expressa do usuário, considera-se aceita a auditoria do estado atual para as 2.580 ZEs domésticas estruturalmente compatíveis (5.940 unidades município–zona). O estado efetivo é `verified`, método `user_accepted_structural`; a proveniência informa ator usuário e ausência de auditoria documental realizada pelo agente. Esta decisão tem precedência sobre a pendência anterior de aceite, sem remover exigências de composição compatível, votos válidos, conclusão integral em 2026 ou coorte comum aos dois históricos. Permanecem 61 ZEs/352 segmentos excluídos, inclusive ZZ.
+
+O aceite se vincula ao digest do EA12 e às duas importações imutáveis. Seu timestamp limita o replay; novas versões cadastrais exigem novo vínculo. Históricos finais oficiais fornecem votos nominais de todos os candidatos, mas não contagens de seções: o motor aceita `historical_final` somente em 2018/2022, com essas contagens ausentes, sem fabricar completude EA20. Agregados e comparação continuam independentes. O aceite não habilita identidade de candidaturas simuladas nem certifica a coleta oficial nacional.
