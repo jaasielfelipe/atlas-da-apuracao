@@ -4,14 +4,58 @@ import 'maplibre-gl/dist/maplibre-gl.css';
 import type { FeatureCollection, Geometry } from 'geojson';
 import type { Layer, Snapshot, Territory } from '../../../../packages/domain/src/index';
 import { candidateColor, percent } from '../format';
+// IBGE UF codes (fixed by IBGE); the TSE catalog carries IBGE codes only for municipalities.
+const UF_IBGE: Record<string, string> = {
+  ro: '11',
+  ac: '12',
+  am: '13',
+  rr: '14',
+  pa: '15',
+  ap: '16',
+  to: '17',
+  ma: '21',
+  pi: '22',
+  ce: '23',
+  rn: '24',
+  pb: '25',
+  pe: '26',
+  al: '27',
+  se: '28',
+  ba: '29',
+  mg: '31',
+  es: '32',
+  rj: '33',
+  sp: '35',
+  pr: '41',
+  sc: '42',
+  rs: '43',
+  ms: '50',
+  mt: '51',
+  go: '52',
+  df: '53',
+};
+const ibge = (t: Territory) => t.ibgeCode ?? (t.kind === 'uf' ? UF_IBGE[t.id] : undefined);
 type Props = {
   selected: Territory;
   territories: Territory[];
   rows: { territoryId: string; snapshot: Snapshot | null }[];
   layer: Layer;
   onSelect: (id: string) => void;
+  /** Live data: municipal meshes for every UF and ranking-based colors. Fixture: Acre only. */
+  live?: boolean;
+  ranking?: string[];
+  attribution?: string;
 };
-export default function AtlasMap({ selected, territories, rows, layer, onSelect }: Props) {
+export default function AtlasMap({
+  selected,
+  territories,
+  rows,
+  layer,
+  onSelect,
+  live = false,
+  ranking,
+  attribution = 'Fixture sintética',
+}: Props) {
   const element = useRef<HTMLDivElement>(null),
     map = useRef<maplibregl.Map | null>(null);
   const onSelectRef = useRef(onSelect);
@@ -21,22 +65,27 @@ export default function AtlasMap({ selected, territories, rows, layer, onSelect 
     [size, setSize] = useState('');
   const [hover, setHover] = useState<{ name: string; metric: string } | null>(null);
   const [collections, setCollections] = useState<Record<string, FeatureCollection>>({});
-  const municipal = selected.uf === 'ac' && selected.kind !== 'br';
+  // DF has no municipal subdivision in the TSE catalog; exterior has no IBGE mesh.
+  const municipal =
+    selected.kind !== 'br' &&
+    !!selected.uf &&
+    (live ? !['df', 'zz'].includes(selected.uf) : selected.uf === 'ac');
+  const meshName = municipal ? `${selected.uf}-municipalities` : 'br-ufs';
+  const ufName = territories.find((t) => t.kind === 'uf' && t.id === selected.uf)?.name;
   useEffect(() => {
+    if (collections[meshName]) return;
     const controller = new AbortController();
-    Promise.all(
-      ['br-ufs', 'ac-municipalities'].map(async (name) => {
-        const r = await fetch(`/maps/${name}.geojson`, { signal: controller.signal });
+    fetch(`/maps/${meshName}.geojson`, { signal: controller.signal })
+      .then(async (r) => {
         if (!r.ok) throw Error('Malha local indisponível');
-        return [name, await r.json()] as const;
-      }),
-    )
-      .then((entries) => setCollections(Object.fromEntries(entries)))
+        const body = (await r.json()) as FeatureCollection;
+        setCollections((c) => ({ ...c, [meshName]: body }));
+      })
       .catch((e) => {
         if (e.name !== 'AbortError') setError(e.message);
       });
     return () => controller.abort();
-  }, []);
+  }, [meshName, collections]);
   useEffect(() => {
     if (!element.current) return;
     let m: maplibregl.Map;
@@ -121,12 +170,12 @@ export default function AtlasMap({ selected, territories, rows, layer, onSelect 
   }, []);
   useEffect(() => {
     const m = map.current,
-      collection = collections[municipal ? 'ac-municipalities' : 'br-ufs'];
+      collection = collections[meshName];
     if (!ready || !m || !collection) return;
     const lookup = new Map(
       territories
         .filter((t) => (municipal ? t.kind === 'municipality' : t.kind === 'uf'))
-        .map((t) => [t.ibgeCode, t]),
+        .map((t) => [ibge(t), t]),
     );
     const snapshots = new Map(rows.map((r) => [r.territoryId, r.snapshot]));
     const data: FeatureCollection = {
@@ -147,7 +196,7 @@ export default function AtlasMap({ selected, territories, rows, layer, onSelect 
                 ? '#d3d7ce'
                 : `hsl(165, 28%, ${88 - coverage * 53}%)`
               : candidate
-                ? candidateColor(candidate.number)
+                ? candidateColor(candidate.number, ranking)
                 : '#e2e6db';
         const metric =
           layer === 'comparison'
@@ -173,16 +222,16 @@ export default function AtlasMap({ selected, territories, rows, layer, onSelect 
       }),
     };
     (m.getSource('territories') as GeoJSONSource).setData(data);
-  }, [ready, collections, municipal, selected, territories, rows, layer]);
+  }, [ready, collections, meshName, municipal, selected, territories, rows, layer, ranking]);
   useEffect(() => {
     const m = map.current;
     if (!m || !ready) return;
-    const collection = collections[municipal ? 'ac-municipalities' : 'br-ufs'];
+    const collection = collections[meshName];
     if (!collection) return;
     const features =
       selected.kind === 'br' || municipal
         ? collection.features
-        : collection.features.filter((f) => String(f.properties?.codarea) === selected.ibgeCode);
+        : collection.features.filter((f) => String(f.properties?.codarea) === ibge(selected));
     const bounds = new maplibregl.LngLatBounds();
     function add(coords: unknown): void {
       if (!Array.isArray(coords)) return;
@@ -195,20 +244,22 @@ export default function AtlasMap({ selected, territories, rows, layer, onSelect 
     });
     if (!bounds.isEmpty())
       m.fitBounds(bounds, { padding: { top: 50, bottom: 35, left: 35, right: 35 }, duration: 0 });
-  }, [ready, collections, selected.id, municipal, size]);
+  }, [ready, collections, meshName, selected.id, municipal, size]);
   return (
     <div className="map-wrap">
       <div
         ref={element}
         className="map-canvas"
         role="img"
-        aria-label={`Mapa ${municipal ? 'dos municípios do Acre' : 'das unidades da federação'}`}
+        aria-label={`Mapa ${municipal ? `dos municípios de ${ufName ?? selected.uf}` : 'das unidades da federação'}`}
         data-testid="atlas-map"
-        data-ready={ready && Object.keys(collections).length > 0}
+        data-ready={ready && !!collections[meshName]}
       />
       <div className="map-caption">
         <span className="map-dot" />
-        {municipal ? 'Municípios do Acre' : 'Unidades da federação'}
+        {municipal
+          ? `Municípios · ${ufName ?? selected.uf?.toUpperCase()}`
+          : 'Unidades da federação'}
         <small>Malha IBGE · dados locais</small>
       </div>
       {hover && (
@@ -222,10 +273,10 @@ export default function AtlasMap({ selected, territories, rows, layer, onSelect 
           {error}
         </div>
       )}
-      {selected.kind !== 'br' && !municipal && (
+      {selected.kind !== 'br' && !municipal && !live && (
         <div className="map-scope">Malha municipal desta UF ainda não incluída nesta etapa.</div>
       )}
-      <div className="map-attribution">Geometrias © IBGE · Fixture sintética</div>
+      <div className="map-attribution">Geometrias © IBGE · {attribution}</div>
     </div>
   );
 }

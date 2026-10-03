@@ -14,6 +14,14 @@ export function registerOfficialComparison(
   historyPath: string,
   root: string,
 ) {
+  // attachAcceptedHistory only appends the (static) historical rows/matches valid at `at`;
+  // cache them per registry + audit set. Timeline points are immutable once their instant has
+  // passed (captures are append-only, no future information), so cache those per instant too.
+  const historyCache = new Map<
+    string,
+    { results: ZoneDataset['results']; matches: ZoneDataset['matches'] }
+  >();
+  const timelineCache = new Map<string, ReturnType<typeof compareZones>>();
   app.get('/api/v1/official/comparison', async (request, reply) => {
     const q = z
       .object({
@@ -102,7 +110,27 @@ export function registerOfficialComparison(
             },
           ]),
         ) as ZoneDataset['mappings'];
-        const dataset = attachAcceptedHistory(history, current, at);
+        const audit = history
+          .prepare(
+            'SELECT COUNT(*) n, MAX(captured_at) last FROM territorial_audit WHERE current_registry_digest=? AND captured_at<=?',
+          )
+          .get(current.registryDigest, at) as { n: number; last: string | null };
+        const historyKey = `${current.registryDigest}|${audit.n}|${audit.last}`;
+        let cached = historyCache.get(historyKey);
+        if (!cached) {
+          const attached = attachAcceptedHistory(history, current, at);
+          cached = {
+            results: attached.results.slice(current.results.length),
+            matches: attached.matches,
+          };
+          if (historyCache.size > 8) historyCache.clear();
+          historyCache.set(historyKey, cached);
+        }
+        const dataset: ZoneDataset = {
+          ...current,
+          results: [...current.results, ...cached.results],
+          matches: [...cached.matches],
+        };
         for (const year of [2018, 2022] as const) {
           if (
             dataset.results.some((r) => r.year === year && r.election !== identities[year].election)
@@ -139,7 +167,16 @@ export function registerOfficialComparison(
             acceptedSegments: dataset.matches.length,
             method: 'user_accepted_structural',
           },
-          timeline: captures.map((t) => ({ ...compareZones(dataset, t, scope), rows: [] })),
+          timeline: captures.map((t) => {
+            const key = `${q.territory}|${t}|${historyKey}|${dataset.matches.length}`;
+            let point = t < at ? timelineCache.get(key) : undefined;
+            if (!point) {
+              point = { ...compareZones(dataset, t, scope), rows: [] };
+              if (timelineCache.size > 5000) timelineCache.clear();
+              if (t < at) timelineCache.set(key, point);
+            }
+            return point;
+          }),
           timelineLimit: 20,
           method:
             'Históricos finais TSE; aceite territorial informado pelo usuário (user_accepted_structural). Mesma coorte completa nos três anos; timeline das últimas 20 capturas/eventos de aceite.',

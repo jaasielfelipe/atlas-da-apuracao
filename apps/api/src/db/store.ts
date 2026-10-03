@@ -104,7 +104,13 @@ export class Store {
     territory: string,
     at?: string,
   ): Snapshot | null {
-    return this.snapshots(environment, office, territory, at).at(-1) ?? null;
+    const row = this.db
+      .prepare(
+        `SELECT payload FROM snapshot WHERE environment=? AND office=? AND territory_id=?
+      AND captured_at <= ? ORDER BY captured_at DESC, rowid DESC LIMIT 1`,
+      )
+      .get(environment, office, territory, at ?? '9999') as { payload: string } | undefined;
+    return row ? JSON.parse(row.payload) : null;
   }
   byId(environment: Environment, id: string): Snapshot | null {
     const row = this.db

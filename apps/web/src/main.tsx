@@ -9,6 +9,10 @@ createRoot(document.getElementById('root')!).render(
       <SimulatedArchive />
     ) : window.location.pathname === '/official' ? (
       <SimulatedArchive environment="official" />
+    ) : window.location.pathname === '/live/official' ? (
+      <App environment="official" />
+    ) : window.location.pathname === '/live/simulated' ? (
+      <App environment="simulated" />
     ) : (
       <App />
     )}

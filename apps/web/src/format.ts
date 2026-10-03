@@ -24,8 +24,12 @@ export const dateTime = (v: string) =>
     timeStyle: 'medium',
   }).format(new Date(v));
 export const colors = ['#24726a', '#637bb1', '#b38b4d', '#9c9d96'];
-export const candidateColor = (number: string) =>
-  colors[Math.max(0, Number(number) - 91) % colors.length];
+/** Fixture numbers start at 91. Live data passes the scope ranking: top three colored, others neutral. */
+export const candidateColor = (number: string, ranking?: string[]) => {
+  if (!ranking) return colors[Math.max(0, Number(number) - 91) % colors.length];
+  const index = ranking.indexOf(number);
+  return colors[index >= 0 && index < colors.length - 1 ? index : colors.length - 1];
+};
 export async function api<T>(url: string, method = 'GET', body?: unknown): Promise<T> {
   const response = await fetch(url, {
     method,

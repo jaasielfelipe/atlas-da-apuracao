@@ -107,6 +107,15 @@ a {
   align-items: center;
   gap: 22px;
 }
+.header-links {
+  display: flex;
+  gap: 22px;
+}
+@media (max-width: 850px) {
+  .header-links {
+    display: none;
+  }
+}
 .badge {
   font-size: 10px;
   letter-spacing: 1px;

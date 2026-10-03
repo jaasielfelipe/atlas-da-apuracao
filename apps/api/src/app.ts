@@ -10,6 +10,7 @@ import { ZoneStore } from './db/zones';
 import { compareZones } from '../../../packages/domain/src/zones';
 import { registerSimulatedArchive } from './services/simulated-archive';
 import { registerOfficialComparison } from './services/official-comparison';
+import { registerLiveDashboard } from './services/live-dashboard';
 
 const atSchema = z.string().datetime({ precision: 3 }).optional();
 const querySchema = z.object({
@@ -49,12 +50,13 @@ export async function createApp(
     request.log.error(error);
     return reply.code(500).send({ error: 'Falha local; dados anteriores preservados' });
   });
-  registerSimulatedArchive(
-    app,
-    options.simulatedDbPath ?? resolve(root, 'data/simulated/collection.sqlite'),
-  );
+  const simulatedPath =
+    options.simulatedDbPath ?? resolve(root, 'data/simulated/collection.sqlite');
+  registerSimulatedArchive(app, simulatedPath);
+  registerLiveDashboard(app, 'simulated', simulatedPath);
   const officialPath = options.officialDbPath ?? resolve(root, 'data/official/collection.sqlite');
   registerSimulatedArchive(app, officialPath, 'official');
+  registerLiveDashboard(app, 'official', officialPath);
   registerOfficialComparison(
     app,
     officialPath,
@@ -257,6 +259,8 @@ export async function createApp(
     await app.register(fastifyStatic, { root: web, prefix: '/' });
     app.get('/simulated', async (_request, reply) => reply.sendFile('index.html'));
     app.get('/official', async (_request, reply) => reply.sendFile('index.html'));
+    app.get('/live/official', async (_request, reply) => reply.sendFile('index.html'));
+    app.get('/live/simulated', async (_request, reply) => reply.sendFile('index.html'));
   }
   return { app, store, fixtures };
 }

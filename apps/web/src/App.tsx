@@ -3,7 +3,7 @@ import type { Bootstrap, Layer, Office, Snapshot } from '../../../packages/domai
 import AtlasMap from './map/AtlasMap';
 import TimelineChart from './charts/TimelineChart';
 import ZoneComparison from './charts/ZoneComparison';
-import { api, candidateColor, dateTime, integer, percent, time } from './format';
+import { api, candidateColor, colors, dateTime, integer, percent, time } from './format';
 
 type View = { snapshot: Snapshot | null; monitoring: boolean; status: string };
 type MapRow = { territoryId: string; snapshot: Snapshot | null };
@@ -27,8 +27,33 @@ function Metric({ name, value, detail }: { name: string; value: string; detail: 
     </div>
   );
 }
-export default function App() {
-  const [bootstrap, setBootstrap] = useState<Bootstrap | null>(null),
+type LiveEnvironment = 'official' | 'simulated';
+const environmentLabel = {
+  fixture: { badge: 'FIXTURE', tag: 'Fixture', base: 'Fixture sintética', footer: 'sintético' },
+  official: {
+    badge: 'OFICIAL TSE',
+    tag: 'Oficial',
+    base: 'EA20 oficial TSE',
+    footer: 'TSE oficial',
+  },
+  simulated: {
+    badge: 'SIMULADO TSE',
+    tag: 'Simulado',
+    base: 'EA20 simulado TSE',
+    footer: 'TSE simulado',
+  },
+};
+export default function App({
+  environment = 'fixture',
+}: {
+  environment?: 'fixture' | LiveEnvironment;
+}) {
+  const live = environment !== 'fixture';
+  const base = live ? `/api/v1/live/${environment}` : '/api/v1';
+  const label = environmentLabel[environment];
+  const [bootstrap, setBootstrap] = useState<(Bootstrap & { collectionRunning?: boolean }) | null>(
+      null,
+    ),
     [error, setError] = useState('');
   const [territoryId, setTerritory] = useState('br'),
     [office, setOffice] = useState<Office>('president'),
@@ -45,16 +70,24 @@ export default function App() {
     [busy, setBusy] = useState(false),
     [loading, setLoading] = useState(true);
   const refresh = useCallback(async () => {
-    const b = await api<Bootstrap>('/api/v1/bootstrap');
+    const b = await api<Bootstrap & { collectionRunning?: boolean }>(`${base}/bootstrap`);
     setBootstrap(b);
     setRevision((n) => n + 1);
-  }, []);
+  }, [base]);
   useEffect(() => {
     refresh().catch((e) => {
       setError(e.message);
       setLoading(false);
     });
   }, [refresh]);
+  // Live archive: follow new captures while showing "now"; replay instants stay fixed.
+  useEffect(() => {
+    if (!live || at) return;
+    const timer = window.setInterval(() => {
+      refresh().catch((e) => setError(e.message));
+    }, 20_000);
+    return () => window.clearInterval(timer);
+  }, [live, at, refresh]);
   const territory = bootstrap?.territories.find((t) => t.id === territoryId);
   useEffect(() => {
     if (!bootstrap || !territory) return;
@@ -67,11 +100,11 @@ export default function App() {
       ...(at ? { at } : {}),
     });
     Promise.all([
-      api<View>(`/api/v1/latest?${query}`),
+      api<View>(`${base}/latest?${query}`),
       api<Snapshot[]>(
-        `/api/v1/snapshots?${new URLSearchParams({ office, territory: territoryId })}`,
+        `${base}/snapshots?${new URLSearchParams({ office, territory: territoryId })}`,
       ),
-      api<MapRow[]>(`/api/v1/map?${mapQuery}`),
+      api<MapRow[]>(`${base}/map?${mapQuery}`),
     ])
       .then(([v, series, map]) => {
         if (active) {
@@ -90,7 +123,7 @@ export default function App() {
     return () => {
       active = false;
     };
-  }, [territoryId, office, at, revision, bootstrap, territory]);
+  }, [territoryId, office, at, revision, bootstrap, territory, base]);
   useEffect(() => {
     if (!playing || !bootstrap) return;
     const timer = window.setInterval(() => {
@@ -116,6 +149,24 @@ export default function App() {
     setAt(instant);
     setPlaying(false);
   }, []);
+  // Live colors: top three of the scope (national sum for president, selected UF for governor).
+  const ranking = useMemo(() => {
+    if (!live) return undefined;
+    const totals = new Map<string, number>();
+    for (const r of rows) {
+      const t = bootstrap?.territories.find((x) => x.id === r.territoryId);
+      if (t?.kind !== 'uf' || (office === 'governor' && t.id !== territory?.uf)) continue;
+      for (const c of r.snapshot?.candidates ?? [])
+        if (c.validShare !== null)
+          totals.set(c.number, (totals.get(c.number) ?? 0) + (c.countedVotes ?? 0));
+    }
+    return [...totals].sort((a, b) => b[1] - a[1]).map(([n]) => n);
+  }, [live, rows, bootstrap, office, territory]);
+  const legendNames = useMemo(() => {
+    const names = new Map<string, string>();
+    for (const r of rows) for (const c of r.snapshot?.candidates ?? []) names.set(c.number, c.name);
+    return (ranking ?? []).slice(0, 3).map((n) => ({ number: n, name: names.get(n) ?? n }));
+  }, [rows, ranking]);
   const candidates = useMemo(
     () =>
       [...(view?.snapshot?.candidates ?? [])].sort(
@@ -183,20 +234,44 @@ export default function App() {
           ELEIÇÕES GERAIS <strong>2026</strong>
         </span>
         <div className="header-status">
-          <a href="/simulated">Acervo simulado</a>
-          <a href="/official">Acervo oficial</a>
-          <span className="badge">FIXTURE</span>
+          <nav className="header-links" aria-label="Painéis e acervos">
+            <a href="/simulated">Acervo simulado</a>
+            <a href="/official">Acervo oficial</a>
+            {live && <a href="/">Painel fixture</a>}
+            {environment !== 'official' && <a href="/live/official">Painel oficial</a>}
+          </nav>
+          <span className="badge">{label.badge}</span>
           <span className="local-status">
-            <i /> Acervo local
+            <i />{' '}
+            {live
+              ? bootstrap.collectionRunning
+                ? 'Coletor ativo'
+                : 'Coletor parado'
+              : 'Acervo local'}
           </span>
         </div>
       </header>
       <div className="fixture-notice">
+        {environment === 'official' ? (
+          <span>
+            <strong>Capturas do ambiente oficial do TSE.</strong> Resultados parciais conforme
+            publicados; ausência de dado não significa zero.
+          </span>
+        ) : environment === 'simulated' ? (
+          <span>
+            <strong>Ambiente simulado do TSE.</strong> Não são resultados oficiais.
+          </span>
+        ) : (
+          <span>
+            <strong>Ambiente de demonstração.</strong> Números e horários sintéticos. Não são
+            resultados oficiais.
+          </span>
+        )}
         <span>
-          <strong>Ambiente de demonstração.</strong> Números e horários sintéticos. Não são
-          resultados oficiais.
+          {live
+            ? `Coletor ${bootstrap.collectionRunning ? 'ativo' : 'parado'} · ${bootstrap.captures.length} capturas`
+            : 'Sem coleta externa'}
         </span>
-        <span>Sem coleta externa</span>
       </div>
       <main className="workspace">
         <aside className="sidebar">
@@ -289,9 +364,13 @@ export default function App() {
             </div>
           )}
           <div className="sidebar-note">
-            <span className="eyebrow">NESTA DEMONSTRAÇÃO</span>
-            <p>27 UFs e municípios do Acre.</p>
-            <small>Selecionar um município não inicia o monitoramento.</small>
+            <span className="eyebrow">{live ? 'NESTE ACERVO' : 'NESTA DEMONSTRAÇÃO'}</span>
+            <p>{live ? 'Malha municipal IBGE de todas as UFs.' : '27 UFs e municípios do Acre.'}</p>
+            <small>
+              {live
+                ? 'Salvar um município inicia a coleta do agregado municipal no coletor em execução.'
+                : 'Selecionar um município não inicia o monitoramento.'}
+            </small>
           </div>
           <div className="sidebar-bottom">
             <span className="local-dot" /> SQLite · armazenamento local
@@ -405,9 +484,27 @@ export default function App() {
                 rows={rows}
                 layer={layer}
                 onSelect={select}
+                live={live}
+                ranking={ranking}
+                attribution={label.base}
               />
               <div className="map-legend">
-                {layer === 'result' ? (
+                {layer === 'result' && live ? (
+                  <>
+                    {legendNames.map((c, i) => (
+                      <span key={c.number}>
+                        <i style={{ background: colors[i] }} />
+                        {c.number} · {c.name}
+                      </span>
+                    ))}
+                    {legendNames.length > 0 && (
+                      <span>
+                        <i style={{ background: colors[3] }} />
+                        Demais
+                      </span>
+                    )}
+                  </>
+                ) : layer === 'result' ? (
                   <>
                     <span>
                       <i style={{ background: '#24726a' }} />
@@ -444,7 +541,7 @@ export default function App() {
                       ? 'UNIVERSO OBSERVADO'
                       : 'COMPARAÇÃO HISTÓRICA'}
                 </span>
-                <span className="small-tag">{at ? 'Replay' : 'Fixture'}</span>
+                <span className="small-tag">{at ? 'Replay' : label.tag}</span>
               </div>
               {territory.kind === 'municipality' && (
                 <div className="monitoring">
@@ -460,8 +557,8 @@ export default function App() {
                     onClick={() =>
                       mutate(
                         watching
-                          ? `/api/v1/watchlist/${encodeURIComponent(territoryId)}`
-                          : '/api/v1/watchlist',
+                          ? `${base}/watchlist/${encodeURIComponent(territoryId)}`
+                          : `${base}/watchlist`,
                         watching ? 'DELETE' : 'POST',
                         watching ? undefined : { territoryId },
                       )
@@ -478,7 +575,11 @@ export default function App() {
                   <p>
                     {office === 'governor'
                       ? 'O comparativo histórico é exclusivo para Presidente nesta versão.'
-                      : 'Demonstração sintética disponível abaixo. Históricos reais e conciliação nacional continuam pendentes.'}
+                      : environment === 'official'
+                        ? 'Zonas eleitorais inteiras concluídas no oficial, com aceite territorial informado pelo usuário. Detalhes abaixo.'
+                        : environment === 'simulated'
+                          ? 'Candidaturas simuladas não se vinculam às séries históricas oficiais.'
+                          : 'Demonstração sintética disponível abaixo. Históricos reais e conciliação nacional continuam pendentes.'}
                   </p>
                   <div className="comparison-method">
                     <b>Referência territorial</b>
@@ -492,7 +593,13 @@ export default function App() {
                         : 'Zonas concluídas e conciliadas'}
                     </b>
                     <span>Mesma coorte nos três anos · líderes entre todos os candidatos</span>
-                    <small>Fixture ativa · coleta zonal nacional não validada</small>
+                    <small>
+                      {environment === 'official'
+                        ? 'Históricos finais 2018/2022 · user_accepted_structural'
+                        : environment === 'simulated'
+                          ? 'Indisponível no simulado'
+                          : 'Fixture ativa · coleta zonal nacional não validada'}
+                    </small>
                   </div>
                 </div>
               ) : !snapshot ? (
@@ -506,7 +613,7 @@ export default function App() {
                   <p>
                     {territory.kind === 'municipality' && !watching
                       ? 'Salve este município para começar a guardar seus resultados.'
-                      : territory.uf !== 'ac' && territory.kind === 'municipality'
+                      : !live && territory.uf !== 'ac' && territory.kind === 'municipality'
                         ? 'A fixture municipal cobre apenas o Acre nesta etapa.'
                         : 'O acervo não contém dados anteriores ao início do monitoramento.'}
                   </p>
@@ -533,8 +640,8 @@ export default function App() {
                     detail={`${integer(snapshot.electorate.turnout)} / ${integer(snapshot.electorate.installed)} eleitores das seções instaladas`}
                   />
                   <p className="footnote">
-                    Base sintética. Cobertura de seções não equivale a votos nem a boletins
-                    disponíveis.
+                    {live ? `Fonte: ${label.base}.` : 'Base sintética.'} Cobertura de seções não
+                    equivale a votos nem a boletins disponíveis.
                   </p>
                 </div>
               ) : (
@@ -550,7 +657,7 @@ export default function App() {
                         <div className="candidate-top">
                           <span
                             className="candidate-number"
-                            style={{ color: candidateColor(c.number) }}
+                            style={{ color: candidateColor(c.number, ranking) }}
                           >
                             {c.number}
                           </span>
@@ -570,7 +677,7 @@ export default function App() {
                           <span
                             style={{
                               width: `${(c.validShare ?? 0) * 100}%`,
-                              background: candidateColor(c.number),
+                              background: candidateColor(c.number, ranking),
                             }}
                           />
                         </div>
@@ -649,8 +756,9 @@ export default function App() {
                 </select>
               </div>
             </div>
-            {layer === 'comparison' && office === 'president' ? (
+            {layer === 'comparison' && office === 'president' && environment !== 'simulated' ? (
               <ZoneComparison
+                endpoint={environment === 'official' ? '/api/v1/official/comparison' : undefined}
                 territory={territoryId}
                 at={at}
                 revision={revision}
@@ -690,15 +798,17 @@ export default function App() {
                 {snapshots.length} observações do território · pontos sem interpolação · Brasília
                 (UTC−3)
               </span>
-              <button
-                className="advance-button"
-                disabled={busy || bootstrap.fixtureStep >= bootstrap.fixtureSteps - 1}
-                onClick={() => mutate('/api/v1/fixture/advance', 'POST')}
-              >
-                {bootstrap.fixtureStep >= bootstrap.fixtureSteps - 1
-                  ? 'Sequência completa'
-                  : '+ Próxima captura sintética'}
-              </button>
+              {!live && (
+                <button
+                  className="advance-button"
+                  disabled={busy || bootstrap.fixtureStep >= bootstrap.fixtureSteps - 1}
+                  onClick={() => mutate('/api/v1/fixture/advance', 'POST')}
+                >
+                  {bootstrap.fixtureStep >= bootstrap.fixtureSteps - 1
+                    ? 'Sequência completa'
+                    : '+ Próxima captura sintética'}
+                </button>
+              )}
             </div>
           </section>
           {snapshot && (
@@ -710,7 +820,7 @@ export default function App() {
                 <div>
                   <b>Base</b>
                   <span>
-                    Fixture sintética · fase {snapshot.phase} · turno {snapshot.round}
+                    {label.base} · fase {snapshot.phase} · turno {snapshot.round}
                   </span>
                   <b>Fonte</b>
                   <code>{snapshot.sourceUrl}</code>
@@ -718,7 +828,7 @@ export default function App() {
                 <div>
                   <b>Geração da fonte</b>
                   <span>{dateTime(snapshot.sourceGeneratedAt)}</span>
-                  <b>Captura da fixture</b>
+                  <b>{live ? 'Captura local' : 'Captura da fixture'}</b>
                   <span>{dateTime(snapshot.capturedAt)}</span>
                   <b>Totalização informada</b>
                   <span>
@@ -732,7 +842,7 @@ export default function App() {
                     {integer(snapshot.sections.total)}. Eleitorado:{' '}
                     {integer(snapshot.electorate.total)}.
                   </span>
-                  <a href={`/api/v1/sources/${snapshot.id}`} target="_blank" rel="noreferrer">
+                  <a href={`${base}/sources/${snapshot.id}`} target="_blank" rel="noreferrer">
                     Inspecionar JSON e hash ↗
                   </a>
                 </div>
@@ -746,7 +856,9 @@ export default function App() {
             <span>
               ATLAS DA APURAÇÃO <b>·</b> ACERVO LOCAL
             </span>
-            <span>Corte selecionado: {capture ? dateTime(capture) : '—'} · sintético</span>
+            <span>
+              Corte selecionado: {capture ? dateTime(capture) : '—'} · {label.footer}
+            </span>
           </footer>
         </div>
       </main>

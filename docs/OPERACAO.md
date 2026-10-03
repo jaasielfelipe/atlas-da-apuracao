@@ -90,3 +90,12 @@ Variáveis: `TSE_RPS` (≤80, padrão 80), `TSE_RPS_START` (padrão 10), `TSE_MA
 - 403/429: pausa global ≥10 min (ou Retry-After maior) e taxa no piso, depois nova rampa. 404 suspende a unidade, sem loop. Corpo rejeitado pela validação (fase, eleição, cadastro) é registrado em `collector_observation.error` e não entra em cache nem no acervo.
 - Iniciar antes do fechamento das urnas é seguro, mas gasta orçamento revalidando arquivos sem mudança; recomenda-se iniciar alguns minutos antes das 17h (Brasília) e deixar rodando.
 - Ensaio em simulado (abaixo, `VALIDACAO.md`): varredura nacional completa em ~2 min 21 s a partir do início, com rampa.
+
+## Painel principal sobre o acervo ao vivo — 03/10/2026
+
+- `http://127.0.0.1:3001/live/official` e `/live/simulated`: o mesmo painel (mapa Brasil → UF → município, Resultado/Cobertura/Comparação, timeline, favoritos) lendo o banco do coletor (`data/<env>/collection.sqlite`). API em `/api/v1/live/<env>/{bootstrap,latest,snapshots,map,sources/:id,watchlist}`. `/` continua fixture; `/official` e `/simulated` continuam como consulta do acervo.
+- Atualiza sozinho a cada 20 s quando em “Agora”; replay fixa o instante. Selo e aviso por ambiente; cabeçalho mostra “Coletor ativo/parado” pelo lease SQLite.
+- Mapa: malha municipal IBGE de todas as UFs (`packages/fixtures/maps/<uf>-municipalities.geojson`, 5.570 municípios, reproduzível com `node scripts/download-maps.mjs`, manifesto com hash). DF e exterior aparecem no nível UF. Cores: três primeiros do escopo (soma nacional para Presidente; UF para Governador), demais em cinza. Municípios só têm resultado se salvos.
+- Salvar/remover município no painel grava a watchlist no banco do coletor; o coletor ao vivo relê a cada 10 s e inicia/suspende o agregado municipal sem reinício. Zonas continuam nacionais.
+- Comparação (Presidente, oficial) usa `/api/v1/official/comparison`; no simulado fica indisponível (candidaturas simuladas não se vinculam às séries). Cache do histórico aceito e dos pontos passados da timeline: 1ª chamada ~2 s, seguintes ~0,3 s com o acervo atual.
+- Rodar a API (`pnpm build && pnpm start`) e o coletor (`pnpm collect:official:live`) em terminais separados; a API só lê (exceto watchlist).

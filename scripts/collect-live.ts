@@ -115,7 +115,15 @@ try {
     `cadastro ${collection.registry.digest.slice(0, 12)} · ${collection.collector.queue.jobs.size} jobs · ` +
       `alvo ${target} req/s (início ${rate.current}) · até ${maxInFlight} em voo`,
   );
-  heartbeat = setInterval(writeStatus, 10_000);
+  heartbeat = setInterval(() => {
+    try {
+      // Favorites saved in the dashboard start/stop municipal aggregates without a restart.
+      if (collection.syncWatchlist()) log('favoritos atualizados a partir do painel');
+    } catch (error) {
+      log(`falha ao ler favoritos: ${error instanceof Error ? error.message : error}`);
+    }
+    writeStatus();
+  }, 10_000);
   await collection.run(stop.signal, undefined, rate, onResult);
   writeStatus();
   log('coleta encerrada');

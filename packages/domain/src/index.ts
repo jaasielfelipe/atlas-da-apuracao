@@ -68,7 +68,7 @@ export interface WatchEntry {
 export interface Bootstrap {
   environment: Environment;
   dataset: string;
-  capabilities: { officialCollection: false; cohort: boolean; historical: false };
+  capabilities: { officialCollection: boolean; cohort: boolean; historical: false };
   territories: Territory[];
   watchlist: WatchEntry[];
   captures: string[];

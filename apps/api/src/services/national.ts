@@ -70,6 +70,7 @@ export class NationalCollection {
   readonly feeds = new Map<string, Feed>();
   private readonly municipalZones = new Map<string, string[]>();
   private readonly hintTargets = new Map<string, string[]>();
+  private watchSignature: string | null = null;
   private readonly contexts: Record<'president' | 'governor', ReturnType<typeof discoverElection>>;
   constructor(
     readonly store: Store,
@@ -143,23 +144,8 @@ export class NationalCollection {
       pollMs: profile.zonePollMs,
       auditMs: profile.auditMs,
     });
-    const add = (feed: Feed, priority: number, pollMs: number) => {
-      const type = feed.type === 'zone' || feed.type === 'aggregate' ? 'EA20' : feed.type;
-      const url = resolveTsePath(type, feed.context);
-      const key = `${environment}:${feed.context.electionId}:1:${feed.type}:${feed.context.uf ?? 'br'}:${feed.context.municipality ?? ''}:${feed.context.zone ?? ''}`;
-      this.feeds.set(key, feed);
-      this.collector.queue.add({
-        key,
-        url,
-        kind: feed.type === 'zone' ? 'zone' : feed.type === 'aggregate' ? 'aggregate' : 'tracking',
-        priority,
-        pollMs,
-        municipality: feed.context.municipality
-          ? `${feed.context.uf}:${feed.context.municipality}`
-          : undefined,
-      });
-      return key;
-    };
+    const add = (feed: Feed, priority: number, pollMs: number) =>
+      this.addFeed(feed, priority, pollMs);
     for (const s of this.registry.segments) {
       const key = add(
         { type: 'zone', context: { ...this.contexts.president, ...s } },
@@ -181,36 +167,26 @@ export class NationalCollection {
           40,
           profile.aggregatePollMs,
         );
-    // Municipal aggregates are created only for saved territories; national zones already exist.
-    for (const entry of store.watchlist(environment).filter((w) => w.enabled)) {
-      const territory = this.territories.find((t) => t.id === entry.territoryId);
-      if (!territory || territory.kind !== 'municipality') continue;
-      for (const office of ['president', 'governor'] as const) {
-        if (office === 'governor' && territory.uf === 'zz') continue;
-        add(
-          {
-            type: 'aggregate',
-            context: {
-              ...this.contexts[office],
-              uf: territory.uf!,
-              municipality: territory.tseCode!,
-            },
-            territory,
-          },
-          10,
-          profile.favoritePollMs,
-        );
-      }
-    }
-    this.collector.queue.setFavorites(
-      new Set(
-        store
-          .watchlist(environment)
-          .filter((w) => w.enabled)
-          .map((w) => w.territoryId),
-      ),
-    );
-    for (const [key, feed] of this.feeds) {
+    this.syncWatchlist();
+    this.collector.save();
+  }
+  private addFeed(feed: Feed, priority: number, pollMs: number) {
+    const type = feed.type === 'zone' || feed.type === 'aggregate' ? 'EA20' : feed.type;
+    const url = resolveTsePath(type, feed.context);
+    const key = `${this.environment}:${feed.context.electionId}:1:${feed.type}:${feed.context.uf ?? 'br'}:${feed.context.municipality ?? ''}:${feed.context.zone ?? ''}`;
+    const known = this.feeds.has(key);
+    this.feeds.set(key, feed);
+    this.collector.queue.add({
+      key,
+      url,
+      kind: feed.type === 'zone' ? 'zone' : feed.type === 'aggregate' ? 'aggregate' : 'tracking',
+      priority,
+      pollMs,
+      municipality: feed.context.municipality
+        ? `${feed.context.uf}:${feed.context.municipality}`
+        : undefined,
+    });
+    if (!known) {
       const routes: string[] = [];
       if (feed.type === 'EA15') routes.push(`EA14:${feed.context.uf}`);
       if (feed.type === 'aggregate') {
@@ -221,7 +197,45 @@ export class NationalCollection {
       for (const route of routes)
         this.hintTargets.set(route, [...(this.hintTargets.get(route) ?? []), key]);
     }
-    this.collector.save();
+    return key;
+  }
+  /**
+   * Municipal aggregates exist only for saved territories; zones are national regardless.
+   * Safe to call while the collector runs (live mode re-reads the watchlist periodically).
+   * Returns true when the plan changed.
+   */
+  syncWatchlist() {
+    const enabled = this.store.watchlist(this.environment).filter((w) => w.enabled);
+    const ids = new Set(enabled.map((w) => w.territoryId));
+    const signature = [...ids].sort().join(',');
+    if (signature === this.watchSignature) return false;
+    this.watchSignature = signature;
+    const added: string[] = [];
+    for (const entry of enabled) {
+      const territory = this.territories.find((t) => t.id === entry.territoryId);
+      if (!territory || territory.kind !== 'municipality') continue;
+      for (const office of ['president', 'governor'] as const) {
+        if (office === 'governor' && territory.uf === 'zz') continue;
+        const key = this.addFeed(
+          {
+            type: 'aggregate',
+            context: {
+              ...this.contexts[office],
+              uf: territory.uf!,
+              municipality: territory.tseCode!,
+            },
+            territory,
+          },
+          10,
+          this.profile.favoritePollMs,
+        );
+        added.push(key);
+      }
+    }
+    this.collector.queue.setFavorites(ids);
+    // A newly (re)saved territory starts now, not at its stored fallback cadence.
+    for (const key of added) this.collector.queue.hint(key, this.now());
+    return true;
   }
   private parse(raw: string, job: Readonly<CollectJob>, capturedAt: string) {
     const feed = this.feeds.get(job.key);
