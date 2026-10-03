@@ -32,6 +32,9 @@ export type CollectorState = {
   turn: number;
   stats: { requests: number; bytes: number; unchanged: number; errors: number };
 };
+/** TSE announces 100 req/s per IP (10 min block). Operator decision 03/10/2026: hard ceiling 80 req/s. */
+export const MAX_RPS = 80;
+export const MAX_IN_FLIGHT = 128;
 /** One budget across all feeds, including conditional requests. Caller supplies clock and audited transport. */
 export class ConservativeCollector {
   private readonly missing = new Set<string>();
@@ -41,25 +44,50 @@ export class ConservativeCollector {
   private readonly active = new Set<string>();
   private readonly dirty = new Set<string>();
   private turn = 0;
+  private interval: number;
+  /**
+   * `nextRequest` is a GCRA theoretical arrival time: a start is allowed when
+   * now >= nextRequest - (burst - 1) * interval. Any 1 s window holds at most
+   * rate + burst starts; burst = 1 is strict spacing.
+   */
   constructor(
-    readonly intervalMs = 500,
+    intervalMs = 500,
     readonly pollMs = 60_000,
     readonly clock?: () => number,
     readonly maxInFlight = 1,
     readonly auditMs = 600_000,
+    readonly burst = 1,
   ) {
     if (
-      !Number.isFinite(intervalMs) ||
-      intervalMs < 200 ||
       !Number.isFinite(pollMs) ||
       pollMs < 1000 ||
       !Number.isInteger(maxInFlight) ||
       maxInFlight < 1 ||
-      maxInFlight > 16 ||
+      maxInFlight > MAX_IN_FLIGHT ||
       !Number.isFinite(auditMs) ||
-      auditMs < 1000
+      auditMs < 1000 ||
+      !Number.isInteger(burst) ||
+      burst < 1 ||
+      burst > 8
     )
-      throw Error('Orçamento excede limite conservador');
+      throw Error('Orçamento excede limite configurado');
+    this.interval = this.checkInterval(intervalMs);
+  }
+  private checkInterval(intervalMs: number) {
+    if (!Number.isFinite(intervalMs) || intervalMs < 1000 / MAX_RPS || intervalMs > 60_000)
+      throw Error('Orçamento excede limite configurado');
+    return intervalMs;
+  }
+  get intervalMs() {
+    return this.interval;
+  }
+  /** Change the start rate at runtime (rate controller); never above MAX_RPS. */
+  setRate(rps: number) {
+    this.interval = this.checkInterval(1000 / rps);
+  }
+  /** Earliest instant at which another start may be allowed by the gate. */
+  get readyAt() {
+    return this.nextRequest - (this.burst - 1) * this.interval;
   }
   snapshot(incremental = false): CollectorState {
     return {
@@ -111,6 +139,13 @@ export class ConservativeCollector {
     if (existing) {
       if (existing.url !== job.url || existing.kind !== job.kind)
         throw Error('Chave de coleta com origem/contrato conflitante');
+      // Restored plan under a new cadence profile: adopt it without waiting out the old one.
+      if (job.pollMs !== undefined && existing.pollMs !== job.pollMs) {
+        existing.pollMs = job.pollMs;
+        if (!existing.failures && !existing.complete && existing.lastSuccess !== undefined)
+          existing.due = Math.min(existing.due, existing.lastSuccess + job.pollMs);
+        this.dirty.add(job.key);
+      }
       return;
     }
     this.jobs.set(job.key, {
@@ -141,7 +176,7 @@ export class ConservativeCollector {
     ) => Promise<CollectResponse>,
     eligible: (job: Readonly<CollectJob>) => boolean = () => true,
   ) {
-    if (this.active.size >= this.maxInFlight || now < this.nextRequest) return null;
+    if (this.active.size >= this.maxInFlight || now < this.readyAt) return null;
     // Every fourth slot serves oldest-due territory regardless of favorites: no starvation.
     const fairness = this.turn % 4 === 3;
     const compare = (a: CollectJob, b: CollectJob) =>
@@ -174,7 +209,7 @@ export class ConservativeCollector {
     job.hinted = false;
     this.dirty.add(job.key);
     this.turn++;
-    this.nextRequest = now + this.intervalMs;
+    this.nextRequest = Math.max(this.nextRequest, now) + this.interval;
     job.lastAttempt = now;
     job.due = now + 30_000; // recovery delay if the process dies after reserving HTTP
     job.requests++;
@@ -221,7 +256,9 @@ export class ConservativeCollector {
         if (response.status === 429 || response.status === 403)
           this.nextRequest = Math.max(
             this.nextRequest,
-            completed + Math.max(600_000, response.retryAfterMs ?? 0),
+            completed +
+              Math.max(600_000, response.retryAfterMs ?? 0) +
+              (this.burst - 1) * this.interval,
           );
       }
       return { key: job.key, status: response.status };

@@ -5,6 +5,7 @@ import type { Store } from '../db/store';
 import { ConservativeCollector, type CollectJob } from '../../../../packages/tse/src/collector';
 import { rawDigest } from '../../../../packages/tse/src/index';
 import type { HttpResult } from '../../../../packages/tse/src/http';
+import type { RateController } from '../../../../packages/tse/src/rate';
 export type AcceptCapture = (raw: string, job: Readonly<CollectJob>, capturedAt: string) => void;
 
 /** Explicitly driven service, no background timer and no activation from the fixture application. */
@@ -15,7 +16,13 @@ export class PersistentCollector {
   constructor(
     readonly store: Store,
     readonly now = () => Date.now(),
-    options: { intervalMs?: number; maxInFlight?: number; pollMs?: number; auditMs?: number } = {},
+    options: {
+      intervalMs?: number;
+      maxInFlight?: number;
+      pollMs?: number;
+      auditMs?: number;
+      burst?: number;
+    } = {},
   ) {
     this.queue = new ConservativeCollector(
       options.intervalMs ?? 500,
@@ -23,6 +30,7 @@ export class PersistentCollector {
       now,
       options.maxInFlight ?? 2,
       options.auditMs ?? 600_000,
+      options.burst ?? 1,
     );
     const db = store.db;
     const state = db
@@ -111,6 +119,8 @@ export class PersistentCollector {
     transport: Parameters<PersistentCollector['tick']>[0],
     signal: AbortSignal,
     accept?: AcceptCapture,
+    rate?: RateController,
+    onResult?: (result: { key: string; status: number }) => void,
   ) {
     if (this.running) throw Error('Coletor já em execução');
     const acquire = () => {
@@ -142,13 +152,30 @@ export class PersistentCollector {
           acquire();
           renewed = this.now();
         }
-        const pending = this.tick(transport, accept)
-          .catch((error) => {
-            failure = error;
-          })
-          .finally(() => active.delete(pending));
-        active.add(pending);
-        await sleep(25);
+        if (rate) {
+          rate.update(this.now());
+          if (rate.current !== 1000 / this.queue.intervalMs) this.queue.setRate(rate.current);
+        }
+        // Several starts per wake: the gate (not the timer) bounds the rate.
+        for (let n = 0; n < 16 && !signal.aborted; n++) {
+          if (this.queue.inFlight >= this.queue.maxInFlight || this.now() < this.queue.readyAt)
+            break;
+          const before = this.queue.stats.requests;
+          const pending: Promise<unknown> = this.tick(transport, accept)
+            .then((result) => {
+              if (!result) return;
+              rate?.observe(result.status, this.now());
+              onResult?.(result);
+            })
+            .catch((error) => {
+              failure = error;
+            })
+            .finally(() => active.delete(pending));
+          active.add(pending);
+          if (this.queue.stats.requests === before) break; // nothing eligible now
+        }
+        const wait = this.queue.readyAt - this.now();
+        await sleep(Math.max(2, Math.min(25, wait)));
       }
       await Promise.all(active);
       if (failure) throw failure;
@@ -196,35 +223,51 @@ export class PersistentCollector {
         }
         const completed = new Date(this.now()).toISOString(),
           digest = response.raw === undefined ? null : rawDigest(response.raw);
-        this.store.db.transaction(() => {
-          this.assertOwner();
-          if (digest && response.raw !== undefined) {
-            accept?.(response.raw, job, completed);
-            this.store.db
-              .prepare('INSERT OR IGNORE INTO collector_body VALUES(?,?)')
-              .run(digest, gzipSync(response.raw));
+        try {
+          this.store.db.transaction(() => {
+            this.assertOwner();
+            if (digest && response.raw !== undefined) {
+              accept?.(response.raw, job, completed);
+              this.store.db
+                .prepare('INSERT OR IGNORE INTO collector_body VALUES(?,?)')
+                .run(digest, gzipSync(response.raw));
+              this.store.db
+                .prepare(
+                  `INSERT INTO collector_cache VALUES(?,?,?,?) ON CONFLICT(job_key) DO UPDATE SET body_digest=excluded.body_digest,captured_at=CASE WHEN body_digest=excluded.body_digest THEN captured_at ELSE excluded.captured_at END,validated_at=excluded.validated_at`,
+                )
+                .run(job.key, digest, completed, completed);
+            } else if (response.status === 304)
+              this.store.db
+                .prepare('UPDATE collector_cache SET validated_at=? WHERE job_key=?')
+                .run(completed, job.key);
             this.store.db
               .prepare(
-                `INSERT INTO collector_cache VALUES(?,?,?,?) ON CONFLICT(job_key) DO UPDATE SET body_digest=excluded.body_digest,captured_at=CASE WHEN body_digest=excluded.body_digest THEN captured_at ELSE excluded.captured_at END,validated_at=excluded.validated_at`,
+                'INSERT INTO collector_observation(job_key,started_at,completed_at,status,bytes,digest) VALUES(?,?,?,?,?,?)',
               )
-              .run(job.key, digest, completed, completed);
-          } else if (response.status === 304)
-            this.store.db
-              .prepare('UPDATE collector_cache SET validated_at=? WHERE job_key=?')
-              .run(completed, job.key);
+              .run(
+                job.key,
+                new Date(started).toISOString(),
+                completed,
+                response.status,
+                response.bytes,
+                digest,
+              );
+          })();
+        } catch (error) {
+          // Rejected body: nothing cached or ingested, but the failed check stays auditable.
           this.store.db
             .prepare(
-              'INSERT INTO collector_observation(job_key,started_at,completed_at,status,bytes,digest) VALUES(?,?,?,?,?,?)',
+              'INSERT INTO collector_observation(job_key,started_at,completed_at,status,bytes,error) VALUES(?,?,?,0,?,?)',
             )
             .run(
               job.key,
               new Date(started).toISOString(),
               completed,
-              response.status,
               response.bytes,
-              digest,
+              error instanceof Error ? error.message : 'Falha de ingestão',
             );
-        })();
+          throw error;
+        }
         return response;
       },
       eligible,

@@ -1,6 +1,12 @@
 import { expect, it } from 'vitest';
 import { Store } from '../db/store';
+import { mkdtempSync, rmSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
+import { setTimeout as sleep } from 'node:timers/promises';
 import { PersistentCollector } from './collector';
+import { MAX_RPS } from '../../../../packages/tse/src/collector';
+import { RateController } from '../../../../packages/tse/src/rate';
 it('reinício preserva ETag, corpo deduplicado, cota, observações e suspensão 404', async () => {
   const store = new Store(':memory:');
   let now = 1000000;
@@ -113,3 +119,48 @@ it('loop usa lease único e drena HTTP antes de liberar proprietário', async ()
     store.close();
   }
 });
+it('run() sustenta ~80 req/s em tempo real sem exceder taxa + rajada e registra ingestão rejeitada', async () => {
+  const folder = mkdtempSync(join(tmpdir(), 'atlas-rate-'));
+  const store = new Store(join(folder, 'rate.sqlite'));
+  try {
+    const collector = new PersistentCollector(store, Date.now, {
+      intervalMs: 1000 / MAX_RPS,
+      maxInFlight: 64,
+      burst: 4,
+      pollMs: 600_000,
+    });
+    for (let i = 0; i < 600; i++)
+      collector.queue.add({ key: `z${i}`, url: `fixture:${i}`, kind: 'zone', priority: 0 });
+    const starts: number[] = [];
+    const stop = new AbortController();
+    const rate = new RateController({ target: MAX_RPS, start: MAX_RPS }, Date.now());
+    setTimeout(() => stop.abort(), 3000);
+    await collector.run(
+      async (job) => {
+        starts.push(Date.now());
+        await sleep(50 + (Number(job.key.slice(1)) % 7) * 60);
+        return { status: 200, bytes: 2, raw: `{"k":"${job.key}"}` };
+      },
+      stop.signal,
+      (_raw, job) => {
+        if (job.key === 'z3') throw Error('corpo rejeitado');
+      },
+      rate,
+    );
+    let worst = 0;
+    for (let i = 0; i < starts.length; i++) {
+      let j = i;
+      while (j < starts.length && starts[j] < starts[i] + 1000) j++;
+      worst = Math.max(worst, j - i);
+    }
+    expect(worst).toBeLessThanOrEqual(MAX_RPS + 4);
+    expect(starts.length).toBeGreaterThanOrEqual(MAX_RPS * 3 * 0.85);
+    expect(
+      store.db.prepare("SELECT error FROM collector_observation WHERE job_key='z3'").get(),
+    ).toEqual({ error: 'corpo rejeitado' });
+    expect(collector.cached('z3')).toBeNull();
+  } finally {
+    store.close();
+    rmSync(folder, { recursive: true, force: true });
+  }
+}, 15_000);

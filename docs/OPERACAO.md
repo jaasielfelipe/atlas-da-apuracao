@@ -75,3 +75,18 @@ Próximas etapas: integrar o adaptador ao acervo/API oficial separado; habilitar
 - `pnpm collect:official`: mesmo ensaio limitado do simulado (`COLLECT_SECONDS` 10–180), em `data/official/collection.sqlite`. Primeira execução real às 21:31Z: 112 requisições 200, 0 erros, 56 snapshots agregados e 25 segmentos do Acre, todos parciais (0 ZEs completas). Evidência: `docs/evidence/national/ingestion-official.json`.
 - `http://127.0.0.1:3001/official`: consulta somente leitura do acervo oficial (selo OFICIAL TSE). Rotas `/api/v1/official/archive`, `/api/v1/official/results` e `/api/v1/official/comparison?territory=br|uf|uf:municipio&at=...`. A comparação usa o banco oficial + `data/history/atlas-history.sqlite`, identidades exatas de `packages/fixtures/history/series-identities.json` conferidas por hash e o aceite `user_accepted_structural`. Banco ausente responde 503; agregados BR/UF continuam disponíveis se a comparação falhar.
 - O painel `/` continua fixture.
+
+## Coleta contínua a 80 req/s — 03/10/2026 (decisão do usuário)
+
+```powershell
+pnpm collect:official:live          # até Ctrl+C; drena requisições em voo e libera lease/lock
+$env:COLLECT_SECONDS=240; pnpm collect:simulated:live   # ensaio com prazo
+```
+
+Variáveis: `TSE_RPS` (≤80, padrão 80), `TSE_RPS_START` (padrão 10), `TSE_MAX_IN_FLIGHT` (≤128, padrão 64), `COLLECT_SECONDS` (0 = contínuo). Perfil `LIVE_PROFILE` (`apps/api/src/services/national.ts`): zonas pendentes a cada 120 s, zonas completas auditadas a cada 30 min, agregados BR/UF dos dois cargos a cada 20 s, EA14 10 s, EA15 30 s, favoritos 30 s. Demanda estimada com todas as zonas pendentes ≈ 57 req/s; o restante absorve pistas EA15, backlog e retentativas. Ao reiniciar, as cadências gravadas no banco são substituídas pelas do perfil.
+
+- Status a cada 10 s no console e em `data/<env>/collector-status.json` (taxa atual/observada, em voo, pausa, eventos de rampa, respostas, cobertura, últimos erros). `/api/v1/<env>/archive` informa `collectionRunning` pelo lease SQLite e a página `/official` mostra “Coletor: ativo · N req/s”.
+- Lock global `data/national-benchmark/active.lock` com PID: impede dois coletores TSE na mesma máquina (inclusive oficial + simulado). Lock de processo morto é recuperado; lock antigo sem PID exige remoção manual.
+- 403/429: pausa global ≥10 min (ou Retry-After maior) e taxa no piso, depois nova rampa. 404 suspende a unidade, sem loop. Corpo rejeitado pela validação (fase, eleição, cadastro) é registrado em `collector_observation.error` e não entra em cache nem no acervo.
+- Iniciar antes do fechamento das urnas é seguro, mas gasta orçamento revalidando arquivos sem mudança; recomenda-se iniciar alguns minutos antes das 17h (Brasília) e deixar rodando.
+- Ensaio em simulado (abaixo, `VALIDACAO.md`): varredura nacional completa em ~2 min 21 s a partir do início, com rampa.

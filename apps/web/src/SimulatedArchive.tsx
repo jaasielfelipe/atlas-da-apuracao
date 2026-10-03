@@ -5,6 +5,11 @@ import ZoneComparison from './charts/ZoneComparison';
 type Archive = {
   environment: 'simulated' | 'official';
   lastObservation: string | null;
+  collectionRunning?: boolean;
+  collector?: {
+    updatedAt: string;
+    rate: { currentRps: number; observedRps10s: number; pausedUntil: string | null };
+  } | null;
   coverage: {
     expectedSegments: number;
     observedSegments: number;
@@ -103,6 +108,21 @@ export default function SimulatedArchive({
         <p>
           Última observação: {archive?.lastObservation ? dateTime(archive.lastObservation) : '—'} ·
           cobertura atual, independente do replay do resultado abaixo.
+        </p>
+        <p data-testid="collector-state">
+          Coletor:{' '}
+          {archive?.collectionRunning ? (
+            <strong>
+              ativo
+              {archive.collector &&
+                ` · ${archive.collector.rate.observedRps10s.toFixed(1)} req/s` +
+                  (archive.collector.rate.pausedUntil
+                    ? ` · pausado até ${dateTime(archive.collector.rate.pausedUntil)}`
+                    : '')}
+            </strong>
+          ) : (
+            'parado'
+          )}
         </p>
         <dl>
           <div>

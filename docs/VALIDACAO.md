@@ -237,3 +237,11 @@ Fechamento: 2 fluxos E2E passaram (18,4s), incluindo mapa/timeline/favoritos e p
 ## Acervo/API oficial separado — 03/10/2026
 
 Integrados `registerOfficialComparison` e o acervo parametrizado por ambiente (`/official`). Toolchain local padronizada: Node 24.19.0 LTS e pnpm 11.19.0 instalados na máquina. Verificações: typecheck, **66 testes** (16 arquivos), build, **3 fluxos E2E** (fixture, simulado, oficial com respostas sintéticas controladas) e prettier passaram. Capturas `official-archive-desktop.png`/`-mobile.png` inspecionadas, sem overflow de página. O E2E oficial usa respostas sintéticas roteadas; não é evidência de captura HTTP oficial. A única ingestão oficial real (60s, 112 requisições) segue parcial: 0 ZEs completas e 0 comparáveis.
+
+## Coleta contínua a 80 req/s — ensaio no simulado TSE, 03/10/2026
+
+Decisão do usuário: alvo 80 req/s (TSE anuncia 100). Implementado teto `MAX_RPS=80`, gate GCRA com rajada 4, controlador AIMD (`packages/tse/src/rate.ts`), loop de despacho com vários inícios por ciclo e registro de corpo rejeitado. Testes novos: teto/rajada sob relógio irregular, pausa 429 com rajada, rampa/redução/piso do controlador e `run()` em tempo real com SQLite em arquivo (≥85% de 80 req/s, nenhuma janela de 1 s acima de 84).
+
+Ensaio real **somente no ambiente simulado** (`COLLECT_SECONDS=240 pnpm collect:simulated:live`, 22:00:33–22:04:33Z): **8.149 requisições** (6.267 × 200, 1.882 × 304), **0 erros, 0 bloqueios**, 62,2 MB de corpos. Rampa 10→80 em 105 s; pico observado de **83 inícios em uma janela de 1 s**; latência p50 606 ms, p95 847 ms, p99 983 ms, máx. 4,2 s; até 48 em voo. **Todos os 6.289 segmentos** do cadastro simulado observados até 22:02:54Z (2 min 21 s após o início); 5.722 completos, 2.126/2.639 ZEs completas. Evidência: [live-simulated-80rps.json](evidence/national/live-simulated-80rps.json).
+
+Não é evidência de coleta oficial: o oficial só publica resultados após o encerramento da votação. O ensaio comprova capacidade de transporte, ingestão e persistência na taxa decidida.

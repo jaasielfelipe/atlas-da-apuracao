@@ -27,6 +27,8 @@
     "accept:territorial-audit": "tsx scripts/accept-territorial-audit.ts",
     "collect:simulated": "tsx scripts/collect-simulated.ts",
     "collect:official": "tsx scripts/collect-official.ts",
+    "collect:official:live": "tsx scripts/collect-live.ts official",
+    "collect:simulated:live": "tsx scripts/collect-live.ts simulated",
     "observe:tse": "node scripts/observe-tse.mjs",
     "inspect:history": "tsx scripts/inspect-history.ts",
     "import:history": "tsx scripts/import-history.ts",

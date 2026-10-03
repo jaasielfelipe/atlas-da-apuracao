@@ -18,6 +18,45 @@ import type { CollectJob } from '../../../../packages/tse/src/collector';
 import type { Territory } from '../../../../packages/domain/src/index';
 
 type Source = { raw: string; url: string; capturedAt: string };
+export type CollectionProfile = {
+  intervalMs: number;
+  maxInFlight: number;
+  burst: number;
+  auditMs: number;
+  zonePollMs: number;
+  ea14PollMs: number;
+  ea15PollMs: number;
+  aggregatePollMs: number;
+  favoritePollMs: number;
+};
+/** Former 2 req/s planning profile; kept for tests and limited rehearsals. */
+export const CONSERVATIVE_PROFILE: CollectionProfile = {
+  intervalMs: 500,
+  maxInFlight: 2,
+  burst: 1,
+  auditMs: 10_800_000,
+  zonePollMs: 900_000,
+  ea14PollMs: 30_000,
+  ea15PollMs: 180_000,
+  aggregatePollMs: 60_000,
+  favoritePollMs: 120_000,
+};
+/**
+ * Election-night profile for a start rate of 80 req/s (operator decision, 03/10/2026).
+ * Steady demand while zones are pending ≈ 6292/120 + 56/20 + 28/30 + 1/10 + favorites ≈ 57 req/s,
+ * leaving headroom for hints, backlog and retries. Due is eligibility, not a freshness guarantee.
+ */
+export const LIVE_PROFILE: CollectionProfile = {
+  intervalMs: 1000 / 80,
+  maxInFlight: 64,
+  burst: 4,
+  auditMs: 1_800_000,
+  zonePollMs: 120_000,
+  ea14PollMs: 10_000,
+  ea15PollMs: 30_000,
+  aggregatePollMs: 20_000,
+  favoritePollMs: 30_000,
+};
 type Feed = {
   type: 'zone' | 'aggregate' | 'EA14' | 'EA15';
   context: PathContext;
@@ -38,6 +77,7 @@ export class NationalCollection {
     config: Source,
     catalog: Source,
     readonly now = Date.now,
+    readonly profile: CollectionProfile = CONSERVATIVE_PROFILE,
   ) {
     for (const source of [config, catalog]) {
       validateOrigin(source.url, environment);
@@ -97,10 +137,11 @@ export class NationalCollection {
       for (const s of this.registry.segments) insert.run(id, s.uf, s.municipality, s.zone);
     })();
     this.collector = new PersistentCollector(store, now, {
-      intervalMs: 500,
-      maxInFlight: 2,
-      pollMs: 900000,
-      auditMs: 10800000,
+      intervalMs: profile.intervalMs,
+      maxInFlight: profile.maxInFlight,
+      burst: profile.burst,
+      pollMs: profile.zonePollMs,
+      auditMs: profile.auditMs,
     });
     const add = (feed: Feed, priority: number, pollMs: number) => {
       const type = feed.type === 'zone' || feed.type === 'aggregate' ? 'EA20' : feed.type;
@@ -120,13 +161,17 @@ export class NationalCollection {
       return key;
     };
     for (const s of this.registry.segments) {
-      const key = add({ type: 'zone', context: { ...this.contexts.president, ...s } }, 0, 900000);
+      const key = add(
+        { type: 'zone', context: { ...this.contexts.president, ...s } },
+        0,
+        profile.zonePollMs,
+      );
       const m = `${s.uf}:${s.municipality}`;
       this.municipalZones.set(m, [...(this.municipalZones.get(m) ?? []), key]);
     }
-    add({ type: 'EA14', context: this.contexts.president }, 30, 30000);
+    add({ type: 'EA14', context: this.contexts.president }, 30, profile.ea14PollMs);
     for (const uf of ufs)
-      add({ type: 'EA15', context: { ...this.contexts.president, uf } }, 30, 180000);
+      add({ type: 'EA15', context: { ...this.contexts.president, uf } }, 30, profile.ea15PollMs);
     for (const office of ['president', 'governor'] as const)
       for (const territory of this.territories.filter(
         (t) => t.kind !== 'municipality' && (office === 'president' || t.kind === 'uf'),
@@ -134,7 +179,7 @@ export class NationalCollection {
         add(
           { type: 'aggregate', context: { ...this.contexts[office], uf: territory.id }, territory },
           40,
-          60000,
+          profile.aggregatePollMs,
         );
     // Municipal aggregates are created only for saved territories; national zones already exist.
     for (const entry of store.watchlist(environment).filter((w) => w.enabled)) {
@@ -153,7 +198,7 @@ export class NationalCollection {
             territory,
           },
           10,
-          120000,
+          profile.favoritePollMs,
         );
       }
     }
@@ -311,8 +356,13 @@ export class NationalCollection {
         }
       }
   };
-  run(signal: AbortSignal, fetcher?: typeof fetch) {
-    return this.collector.run(this.transport(fetcher), signal, this.accept);
+  run(
+    signal: AbortSignal,
+    fetcher?: typeof fetch,
+    rate?: Parameters<PersistentCollector['run']>[3],
+    onResult?: Parameters<PersistentCollector['run']>[4],
+  ) {
+    return this.collector.run(this.transport(fetcher), signal, this.accept, rate, onResult);
   }
   status() {
     const latest = `WITH latest AS (SELECT *, ROW_NUMBER() OVER(PARTITION BY uf,municipality,zone ORDER BY captured_at DESC) rn FROM zone_result WHERE environment=? AND election=?), coverage AS (SELECT s.uf,s.zone,COUNT(*) expected,SUM(CASE WHEN r.status='complete' THEN 1 ELSE 0 END) complete,COUNT(r.id) observed FROM zone_segment s LEFT JOIN latest r ON r.uf=s.uf AND r.municipality=s.municipality AND r.zone=s.zone AND r.rn=1 WHERE s.registry_id=? GROUP BY s.uf,s.zone)`;

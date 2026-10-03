@@ -1,5 +1,6 @@
 import Database from 'better-sqlite3';
-import { existsSync } from 'node:fs';
+import { existsSync, readFileSync } from 'node:fs';
+import { dirname, resolve } from 'node:path';
 import { gunzipSync } from 'node:zlib';
 import type { FastifyInstance } from 'fastify';
 import { z } from 'zod';
@@ -57,11 +58,25 @@ export function registerSimulatedArchive(
       const last = db.prepare('SELECT MAX(completed_at) at FROM collector_observation').get() as {
         at: string | null;
       };
+      // Collector lease (renewed every 5 s, expires after 60 s) is the source of truth for liveness.
+      const lease = db.prepare('SELECT expires FROM collector_owner WHERE id=1').get() as
+        | { expires: number }
+        | undefined;
+      const statusFile = resolve(dirname(path), 'collector-status.json');
+      let collector: unknown = null;
+      if (lease && lease.expires > Date.now() && existsSync(statusFile))
+        try {
+          const s = JSON.parse(readFileSync(statusFile, 'utf8'));
+          collector = { updatedAt: s.updatedAt, rate: s.rate, coverage: s.coverage };
+        } catch {
+          collector = null; // status file mid-write; lease still says running
+        }
       return {
         environment,
         mode: 'read_only_archive',
-        collectionRunning: null,
-        collectionRunningKnown: false,
+        collectionRunning: Boolean(lease && lease.expires > Date.now()),
+        collectionRunningKnown: true,
+        collector,
         lastObservation: last.at,
         coverage,
         territories,

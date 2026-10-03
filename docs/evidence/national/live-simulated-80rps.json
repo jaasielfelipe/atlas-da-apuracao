@@ -1,0 +1,74 @@
+{
+  "environment": "simulated",
+  "command": "COLLECT_SECONDS=240 pnpm collect:simulated:live",
+  "startedAt": "2026-10-03T22:00:33.978Z",
+  "endedAt": "2026-10-03T22:04:33.501Z",
+  "targetRps": 80,
+  "rampStart": 10,
+  "requests": 8149,
+  "byStatus": {
+    "200": 6267,
+    "304": 1882
+  },
+  "errors": 0,
+  "bytes": 62171070,
+  "maxStartsInAny1sWindow": 83,
+  "latencyMs": {
+    "p50": 606,
+    "p95": 847,
+    "p99": 983,
+    "max": 4197
+  },
+  "rateEvents": [
+    {
+      "at": "2026-10-03T22:00:33.978Z",
+      "rps": 10,
+      "reason": "start"
+    },
+    {
+      "at": "2026-10-03T22:00:48.998Z",
+      "rps": 20,
+      "reason": "ramp"
+    },
+    {
+      "at": "2026-10-03T22:01:04.023Z",
+      "rps": 30,
+      "reason": "ramp"
+    },
+    {
+      "at": "2026-10-03T22:01:19.024Z",
+      "rps": 40,
+      "reason": "ramp"
+    },
+    {
+      "at": "2026-10-03T22:01:34.038Z",
+      "rps": 50,
+      "reason": "ramp"
+    },
+    {
+      "at": "2026-10-03T22:01:49.047Z",
+      "rps": 60,
+      "reason": "ramp"
+    },
+    {
+      "at": "2026-10-03T22:02:04.069Z",
+      "rps": 70,
+      "reason": "ramp"
+    },
+    {
+      "at": "2026-10-03T22:02:19.076Z",
+      "rps": 80,
+      "reason": "ramp"
+    }
+  ],
+  "coverageAtEnd": {
+    "expectedSegments": 6289,
+    "observedSegments": 6289,
+    "completeSegments": 5722,
+    "expectedZones": 2639,
+    "completeZones": 2126,
+    "at": "2026-10-03T22:04:04.187Z"
+  },
+  "lastSegmentFirstObservedAt": "2026-10-03T22:02:54.717Z",
+  "note": "Ambiente simulado do TSE; não é evidência de coleta oficial. Cobertura nacional de segmentos (inclui ZZ) em uma janela."
+}
