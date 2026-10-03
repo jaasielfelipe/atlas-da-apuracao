@@ -1,4 +1,20 @@
-# Registro de validação — 02/10/2026
+# Registro de validação
+
+## Resumo do estado — 03/10/2026, noite
+
+| Item | Sintético (fixture) | Simulado TSE | Oficial TSE |
+|---|---|---|---|
+| Motor de coorte zonal, contagens, matrizes, replay | comprovado (testes) | — | — |
+| Ingestão EA20 agregado e zonal normalizada | comprovado | comprovado (nacional, 6.289 segmentos) | amostras parciais (314 segmentos, 0 seções totalizadas antes da votação) |
+| Coleta contínua a 80 req/s com rampa e pausa | comprovado (tempo real, transporte injetado) | comprovado (8.149 req, 0 erros; soak 30 min) | fumaça 30 s a ≤ 20 req/s, 0 erros |
+| Queda / reinício / lease | comprovado (testes) | comprovado (`taskkill /F`) | — |
+| Painel ao vivo (mapa nacional, favoritos → coletor) | E2E com bancos semeados | inspeção visual sobre acervo real | E2E com cadastro oficial capturado e corpos sintéticos |
+| Conciliação histórica 2018/2022 | — | não se aplica (candidaturas simuladas) | aceite do usuário `user_accepted_structural` (2.580 ZEs) |
+| **Coleta e conciliação nacional oficial com resultados** | — | — | **não comprovada** — TSE publica após 17h de 04/10/2026 |
+
+As seções abaixo são o registro cronológico (append-only) que sustenta este resumo.
+
+# Registro cronológico — a partir de 02/10/2026
 
 As etapas 0/1 abaixo preservam o registro da primeira implementação. A [revisão do Aditivo 01](#revisão-do-aditivo-01--02102026) registra a migração documental posterior e distingue os novos requisitos zonais das funcionalidades efetivamente verificadas.
 
@@ -159,7 +175,7 @@ A tentativa de commit da noite anterior não foi executada: a revisão automáti
 
 ## Validação técnica de desempenho nacional — 03/10/2026
 
-Relatório: [VALIDACAO_COLETA_NACIONAL.md](VALIDACAO_COLETA_NACIONAL.md). Ferramentas opt-in adicionadas sem alterar arquitetura, stack, escopo nacional ou polling do produto.
+Relatório: [VALIDACAO_COLETA_NACIONAL.md](history/2026-10-03/VALIDACAO_COLETA_NACIONAL.md). Ferramentas opt-in adicionadas sem alterar arquitetura, stack, escopo nacional ou polling do produto.
 
 - EA12 simulado novamente consultado, hash idêntico à fixture: 6.289 segmentos, 2.639 ZEs, 5.755 entradas município/localidade (5.565 de zona única e 190 de múltiplas); exterior discriminado.
 - 56 requisições sequenciais ao simulado com orçamento alvo 2 req/s, teto configurável 20: 20 HTTP200, 36 HTTP304; nenhum 404/429/5xx. ETag e Last-Modified conferidos separadamente. Nenhuma consulta oficial ou teste de saturação.
@@ -171,7 +187,7 @@ Relatório: [VALIDACAO_COLETA_NACIONAL.md](VALIDACAO_COLETA_NACIONAL.md). Ferram
 
 ## Otimização incremental e concorrente — 03/10/2026
 
-Implementação e medições em [OTIMIZACAO_COLETA_NACIONAL.md](OTIMIZACAO_COLETA_NACIONAL.md). Migration 005; UPSERT de jobs alterados, gate único, pool configurável com vaga/precedência de BR/UF, pistas coalescidas, auditorias distribuídas, backoff/pausa global, lease por banco e replay imutável. Teste de fila com 6.292 jobs confirma duas atualizações do único job servido. Nenhuma mudança de stack, metodologia, universo ou frontend.
+Implementação e medições em [OTIMIZACAO_COLETA_NACIONAL.md](history/2026-10-03/OTIMIZACAO_COLETA_NACIONAL.md). Migration 005; UPSERT de jobs alterados, gate único, pool configurável com vaga/precedência de BR/UF, pistas coalescidas, auditorias distribuídas, backoff/pausa global, lease por banco e replay imutável. Teste de fila com 6.292 jobs confirma duas atualizações do único job servido. Nenhuma mudança de stack, metodologia, universo ou frontend.
 
 - **Local/sintético:** 300 ciclos/6.289 jobs, 1.179 ms, 254,36 ciclos/s, p95 5,56 ms. Baseline 19.603 ms/15,30 ciclos/s. Ganho 16,62× neste ensaio curto; não é medição de ingestão nacional distinta/coorte.
 - **Simulado real:** 76 HTTP em duas amostras a 2 req/s, concorrência 2 e 3; 40 HTTP200, 36 HTTP304, nenhum erro. Pico 2 em voo em ambas. Agregados BR/AC normalizados persistidos separadamente, sem dependência histórica. Não houve coleta de todos os resultados nacionais nem consultas ao oficial.
@@ -261,3 +277,9 @@ Validação visual com o acervo **simulado** real capturado no ensaio de 80 req/
 - Checklist do domingo: [CHECKLIST_DOMINGO.md](CHECKLIST_DOMINGO.md).
 
 Estado declarado: coleta oficial contínua **pronta para operação**; **não** há ainda comprovação de coleta/conciliação nacional oficial com resultados, porque o TSE só publica totalização após o encerramento da votação. Essa declaração deve ser feita no domingo com base no acervo oficial.
+
+## Soak de 30 min e consolidação do código — 03/10/2026, noite
+
+**Soak no simulado** (22:45–23:15Z), coletor contínuo + API lendo a cada 20 s: 26.641 requisições (26.640 × 304, 1 timeout de 20 s recuperado por backoff), pico de 83 inícios em 1 s, p50 481 ms / p95 737 ms. WAL estável em ≤ 4,15 MB (checkpoint funcionando com leitor concorrente), banco 80,6 → 87,5 MB, leitura do painel 130–300 ms. Limite: conteúdo estável do simulado não mede crescimento de corpos quando os resultados mudam. Evidência: [soak-simulated-30min.json](evidence/national/soak-simulated-30min.json).
+
+**Consolidação:** API única para fixture e ao vivo (`dashboard.ts` + `live-source.ts`); páginas de acervo `/official` e `/simulated` incorporadas ao painel (redirecionam a `/live/<env>`; cobertura zonal e estado do coletor agora na aba Cobertura); `App.tsx` dividido em `environment.ts`, `useDashboard.ts` e `components/`; E2E ao vivo determinístico com bancos semeados em `tmp/e2e` (`tests/e2e/global-setup.ts`), sem arquivos em `data/`; documentação vigente consolidada (README, `docs/README.md`, `docs/OPERACAO.md`, AGENTS.md) e versões anteriores em `docs/history/2026-10-03/`. Coletor e motor não alterados. Verificações: typecheck, **75 testes**, build, prettier e **3 E2E** (fixture, oficial ao vivo, simulado ao vivo) passaram; capturas `live-official-desktop.png` / `-mobile.png` inspecionadas.

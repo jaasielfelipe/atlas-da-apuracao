@@ -212,7 +212,7 @@ Pendentes para aceite integral: conclusão positiva no oficial, demais exceçõe
 - Lease do loop impede segundo proprietário no mesmo banco; parada aguarda os HTTP em curso. Não afirmar controle de outros processos/bancos no mesmo IP.
 - Replay de corpos usa somente observações aceitas até o instante; observações são imutáveis. Match estrutural nacional nunca é promovido a verified sem auditoria.
 
-Evidências e parâmetros: `OTIMIZACAO_COLETA_NACIONAL.md`.
+Evidências e parâmetros: `history/2026-10-03/OTIMIZACAO_COLETA_NACIONAL.md` (perfil 2 req/s, histórico; perfil vigente em `OPERACAO.md`).
 
 ## Contratos da ingestão integrada e consulta do simulado
 
@@ -220,7 +220,7 @@ Evidências e parâmetros: `OTIMIZACAO_COLETA_NACIONAL.md`.
 - Aceitação transaciona normalização, bruto/cache/observação; repetição não duplica resultado e A→B→A preserva a terceira captura.
 - EA15 dispara pistas por segmento; hashes persistem. Primeira pista não reconsulta agregado já capturado, mas mudança posterior o antecipa. Bootstrap dirigido mantém a cota sem suspender a fila nacional.
 - Cobertura de ZE requer todos os segmentos normalizados completos; 22 segmentos capturados no ensaio não viram 22 ZEs nem correspondências históricas verificadas.
-- `/api/v1/simulated/*` lê banco separado, não cria dados, respeita corte temporal e nunca substitui `/api/v1/latest` fixture. `/simulated` não inicia coleta e mantém última captura visível se atualização falhar.
+- `/api/v1/live/<official|simulated>/*` (mesmas rotas do fixture, `apps/api/src/services/dashboard.ts`) lê o banco do coletor daquele ambiente, nunca cria dados nem mistura ambientes, respeita corte temporal e nunca substitui `/api/v1/*` fixture; banco ausente responde 503. A única escrita é a watchlist, que o coletor contínuo relê. `/live/<env>` não inicia coleta e mantém o último dado visível se uma atualização falhar. Cobertos por `dashboard.test.ts` e `tests/e2e/live.spec.ts`.
 
 ## Contratos adicionais — aceite territorial do usuário
 

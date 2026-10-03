@@ -173,7 +173,7 @@ describe('Etapa 1: SQLite e API local em fixture', () => {
   });
   it('modo oficial falha fechado e bloqueia mutações de origem externa', async () => {
     await expect(createApp({ environment: 'official', dbPath: ':memory:' })).rejects.toThrow(
-      /ainda não habilitada/,
+      /TSE_ENV só aceita fixture/,
     );
     const { app } = await setup();
     expect(

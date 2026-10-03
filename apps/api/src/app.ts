@@ -1,23 +1,15 @@
 import Fastify from 'fastify';
 import fastifyStatic from '@fastify/static';
-import { z, ZodError } from 'zod';
+import { ZodError } from 'zod';
 import { existsSync } from 'node:fs';
 import { resolve } from 'node:path';
-import type { Bootstrap, Office } from '../../../packages/domain/src/index';
 import { Store } from './db/store';
 import { FixtureService } from './services/fixtures';
 import { ZoneStore } from './db/zones';
 import { compareZones } from '../../../packages/domain/src/zones';
-import { registerSimulatedArchive } from './services/simulated-archive';
-import { registerOfficialComparison } from './services/official-comparison';
-import { registerLiveDashboard } from './services/live-dashboard';
+import { registerDashboard, type DashboardSource } from './services/dashboard';
+import { liveSource } from './services/live-source';
 
-const atSchema = z.string().datetime({ precision: 3 }).optional();
-const querySchema = z.object({
-  office: z.enum(['president', 'governor']).default('president'),
-  territory: z.string().default('br'),
-  at: atSchema,
-});
 export async function createApp(
   options: {
     dbPath?: string;
@@ -33,12 +25,28 @@ export async function createApp(
   const environment = options.environment ?? process.env.TSE_ENV ?? 'fixture';
   if (environment !== 'fixture')
     throw Error(
-      'Coleta official/simulated ainda não habilitada. Use TSE_ENV=fixture; contratos reais são verificados nos testes.',
+      'TSE_ENV só aceita fixture: dados reais são servidos em /live/<env> a partir do banco do coletor.',
     );
   const store = new Store(options.dbPath ?? resolve(root, 'data/atlas.sqlite'), root);
   const fixtures = new FixtureService(store, root);
   const app = Fastify({ logger: options.logger ?? false });
-  app.addHook('onClose', async () => store.close());
+  const official = liveSource(
+    'official',
+    options.officialDbPath ?? resolve(root, 'data/official/collection.sqlite'),
+    {
+      historyPath: options.historyDbPath ?? resolve(root, 'data/history/atlas-history.sqlite'),
+      root,
+    },
+  );
+  const simulated = liveSource(
+    'simulated',
+    options.simulatedDbPath ?? resolve(root, 'data/simulated/collection.sqlite'),
+  );
+  app.addHook('onClose', async () => {
+    store.close();
+    official.close();
+    simulated.close();
+  });
   app.addHook('onRequest', async (request, reply) => {
     const origin = request.headers.origin;
     if (origin && !/^http:\/\/127\.0\.0\.1:(5173|4173|3001)$/.test(origin))
@@ -50,152 +58,20 @@ export async function createApp(
     request.log.error(error);
     return reply.code(500).send({ error: 'Falha local; dados anteriores preservados' });
   });
-  const simulatedPath =
-    options.simulatedDbPath ?? resolve(root, 'data/simulated/collection.sqlite');
-  registerSimulatedArchive(app, simulatedPath);
-  registerLiveDashboard(app, 'simulated', simulatedPath);
-  const officialPath = options.officialDbPath ?? resolve(root, 'data/official/collection.sqlite');
-  registerSimulatedArchive(app, officialPath, 'official');
-  registerLiveDashboard(app, 'official', officialPath);
-  registerOfficialComparison(
-    app,
-    officialPath,
-    options.historyDbPath ?? resolve(root, 'data/history/atlas-history.sqlite'),
-    root,
-  );
-  function findTerritory(id: string) {
-    return fixtures.territories.find((t) => t.id === id);
-  }
-  function parameters(input: unknown) {
-    const query = querySchema.parse(input),
-      territory = findTerritory(query.territory);
-    if (!territory)
-      throw new ZodError([
-        { code: 'custom', path: ['territory'], message: 'Território desconhecido' },
-      ]);
-    if (query.office === 'governor' && ['br', 'exterior'].includes(territory.kind))
-      throw new ZodError([
-        { code: 'custom', path: ['office'], message: 'Governador exige UF ou município' },
-      ]);
-    return { ...query, selected: territory };
-  }
-  app.get('/health', async () => ({
-    ok: true,
-    environment,
-    database: 'sqlite-wal',
-    version: '0.1.0',
-    lastCapture: store.captures('fixture').at(-1) ?? null,
-  }));
-  app.get(
-    '/api/v1/bootstrap',
-    async (): Promise<Bootstrap> => ({
-      environment: 'fixture',
+  const fixture: DashboardSource = {
+    environment: 'fixture',
+    coverageBasis: 'synthetic',
+    open: () => ({ store, territories: fixtures.territories }),
+    bootstrap: () => ({
       dataset: fixtures.scenario.description,
       capabilities: { officialCollection: false, cohort: true, historical: false },
-      territories: fixtures.territories,
-      watchlist: store.watchlist('fixture'),
-      captures: store.captures('fixture'),
       fixtureStep: fixtures.step,
       fixtureSteps: fixtures.scenario.steps.length,
     }),
-  );
-  app.get('/api/v1/territories', async (request) => {
-    const {
-      q = '',
-      kind,
-      uf,
-    } = z
-      .object({
-        q: z.string().max(100).optional(),
-        kind: z.string().optional(),
-        uf: z.string().optional(),
-      })
-      .parse(request.query);
-    const normalize = (s: string) =>
-      s
-        .normalize('NFD')
-        .replace(/[\u0300-\u036f]/g, '')
-        .toLowerCase();
-    return fixtures.territories
-      .filter(
-        (t) =>
-          (!kind || t.kind === kind) &&
-          (!uf || t.uf === uf) &&
-          normalize(t.name).includes(normalize(q)),
-      )
-      .slice(0, 80);
-  });
-  app.get('/api/v1/watchlist', async () => store.watchlist('fixture'));
-  app.post('/api/v1/watchlist', async (request, reply) => {
-    const body = z
-      .object({ territoryId: z.string(), collectBu: z.literal(false).optional() })
-      .strict()
-      .parse(request.body);
-    const territory = findTerritory(body.territoryId);
-    if (!territory || territory.kind !== 'municipality')
-      return reply.code(400).send({ error: 'Selecione um município válido' });
-    const enabled = store.watchlist('fixture').filter((w) => w.enabled);
-    if (enabled.length >= 20 && !enabled.some((w) => w.territoryId === territory.id))
-      return reply.code(409).send({ error: 'Limite local de 20 municípios ativos' });
-    store.db.transaction(() => {
-      store.setWatch('fixture', territory.id, true);
-      fixtures.ingestTerritory(territory);
-    })();
-    return store.watchlist('fixture');
-  });
-  app.delete('/api/v1/watchlist/:id', async (request, reply) => {
-    const { id } = z.object({ id: z.string() }).parse(request.params);
-    if (findTerritory(id)?.kind !== 'municipality')
-      return reply.code(404).send({ error: 'Município não encontrado' });
-    store.setWatch('fixture', id, false);
-    return store.watchlist('fixture');
-  });
-  app.get('/api/v1/latest', async (request) => {
-    const q = parameters(request.query),
-      snapshot = store.latest('fixture', q.office, q.territory, q.at);
-    const watching = store
-      .watchlist('fixture')
-      .some((w) => w.territoryId === q.territory && w.enabled);
-    return {
-      environment,
-      snapshot,
-      monitoring: watching,
-      status: snapshot
-        ? snapshot.status
-        : q.selected.kind === 'municipality' && !watching
-          ? 'not_monitored'
-          : 'not_loaded',
-    };
-  });
-  app.get('/api/v1/snapshots', async (request) => {
-    const q = parameters(request.query);
-    return store.snapshots('fixture', q.office, q.territory, q.at);
-  });
-  app.get('/api/v1/coverage', async (request) => {
-    const q = parameters(request.query),
-      snapshot = store.latest('fixture', q.office, q.territory, q.at);
-    return {
-      environment,
-      basis: 'synthetic',
-      universe: 'seções e eleitorado do território no snapshot',
-      snapshotId: snapshot?.id ?? null,
-      sections: snapshot?.sections ?? null,
-      electorate: snapshot?.electorate ?? null,
-    };
-  });
-  app.get('/api/v1/map', async (request) => {
-    const q = querySchema.parse(request.query);
-    const territories = fixtures.territories.filter(
-      (t) => t.kind === 'uf' || (t.kind === 'municipality' && t.uf === q.territory),
-    );
-    return territories.map((t) => ({
-      territoryId: t.id,
-      snapshot: store.latest('fixture', q.office, t.id, q.at),
-    }));
-  });
-  app.get('/api/v1/comparison', async (request) => {
-    const q = parameters(request.query);
-    if (q.office === 'president') {
+    watch: (_ctx, territory, enabled) => {
+      if (enabled) fixtures.ingestTerritory(territory);
+    },
+    async comparison(_request, _reply, _ctx, q) {
       const at = q.at ?? store.captures('fixture').at(-1)!;
       const dataset = new ZoneStore(store).load('fixture', at);
       const scope = {
@@ -204,7 +80,7 @@ export async function createApp(
       };
       const comparison = dataset ? compareZones(dataset, at, scope) : null;
       return {
-        environment,
+        environment: 'fixture',
         status: comparison?.status ?? 'pending_validation',
         basis: 'historical_zone_cohort',
         unitKind: q.selected.kind === 'municipality' ? 'municipality_zone' : 'whole_zone',
@@ -221,33 +97,18 @@ export async function createApp(
         method:
           'Cadastro e correspondência sintéticos explícitos; não provam identidade de seções, eleitores ou limites. Recorte de demonstração: 3 zonas no Acre, 6 segmentos. Exterior fora da fixture. Coleta e conciliação nacional oficial não validadas.',
       };
-    }
-    return {
-      environment,
-      status: 'unavailable',
-      basis: 'historical_zone_cohort',
-      unitKind: q.selected.kind === 'municipality' ? 'municipality_zone' : 'whole_zone',
-      reason:
-        q.office === 'governor'
-          ? 'Comparação histórica de governador fora do escopo'
-          : 'Histórico 2018/2022 não importado e identidades oficiais 2026 não resolvidas',
-      candidateStatus: 'candidate_unresolved',
-      cohort: {
-        enabled: false,
-        status: q.office === 'governor' ? 'out_of_scope' : 'pending_validation',
-        reason:
-          q.office === 'governor'
-            ? 'Comparação histórica de governador fora do escopo'
-            : 'EA20 município–zona, cadastro completo e conciliação 2018/2022 pendentes; coleta zonal nacional não validada',
-      },
-    };
-  });
-  app.get('/api/v1/sources/:id', async (request, reply) => {
-    const { id } = z.object({ id: z.string() }).parse(request.params),
-      snapshot = store.byId('fixture', id);
-    if (!snapshot) return reply.code(404).send({ error: 'Snapshot não encontrado' });
-    return { snapshot, raw: JSON.parse(store.raw(snapshot.rawDigest)!) };
-  });
+    },
+  };
+  app.get('/health', async () => ({
+    ok: true,
+    environment,
+    database: 'sqlite-wal',
+    version: '0.1.0',
+    lastCapture: store.captures('fixture').at(-1) ?? null,
+  }));
+  registerDashboard(app, '/api/v1', fixture);
+  registerDashboard(app, '/api/v1/live/official', official);
+  registerDashboard(app, '/api/v1/live/simulated', simulated);
   app.post('/api/v1/fixture/advance', async () => ({ step: fixtures.advance() }));
   await app.register(fastifyStatic, {
     root: resolve(root, 'packages/fixtures/maps'),
@@ -257,10 +118,11 @@ export async function createApp(
   const web = resolve(root, 'dist/web');
   if (existsSync(web)) {
     await app.register(fastifyStatic, { root: web, prefix: '/' });
-    app.get('/simulated', async (_request, reply) => reply.sendFile('index.html'));
-    app.get('/official', async (_request, reply) => reply.sendFile('index.html'));
-    app.get('/live/official', async (_request, reply) => reply.sendFile('index.html'));
-    app.get('/live/simulated', async (_request, reply) => reply.sendFile('index.html'));
+    for (const page of ['/live/official', '/live/simulated'])
+      app.get(page, async (_request, reply) => reply.sendFile('index.html'));
+    // Former read-only archive pages now live in the main dashboard.
+    app.get('/official', async (_request, reply) => reply.redirect('/live/official'));
+    app.get('/simulated', async (_request, reply) => reply.redirect('/live/simulated'));
   }
   return { app, store, fixtures };
 }

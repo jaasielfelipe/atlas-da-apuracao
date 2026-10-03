@@ -7,6 +7,7 @@ import { createApp } from '../app';
 import { NationalCollection } from './national';
 import { persistHistory } from '../db/history';
 import { acceptTerritorialAudit } from '../db/territorial';
+import { cacheBootstrapCatalog } from './test-helpers';
 
 it('acervo oficial isolado: replay, aceite, fonte parcial e agregado sem depend√™ncia hist√≥rica', async () => {
   const folder = mkdtempSync(join(tmpdir(), 'atlas-official-'));
@@ -28,6 +29,7 @@ it('acervo oficial isolado: replay, aceite, fonte parcial e agregado sem depend√
     },
     { raw: read('zonal/official-ea12.json'), url: cat.url, capturedAt: cat.capturedAt },
   );
+  cacheBootstrapCatalog(store, cat.url, read('zonal/official-ea12.json'), cat.capturedAt);
   const job = [...collection.collector.queue.jobs.values()].find((j) => j.url === zone.url)!;
   collection.accept(read('zonal/official-ac01120-z0008.json'), job, zone.capturedAt);
   const ids = [2018, 2022].map(
@@ -66,7 +68,7 @@ it('acervo oficial isolado: replay, aceite, fonte parcial e agregado sem depend√
   });
   try {
     const c = await app.inject(
-      '/api/v1/official/comparison?territory=ac&at=2026-10-03T01:01:00.000Z',
+      '/api/v1/live/official/comparison?territory=ac&at=2026-10-03T01:01:00.000Z',
     );
     expect(c.statusCode).toBe(200);
     expect(c.json().comparison).toMatchObject({
@@ -75,21 +77,23 @@ it('acervo oficial isolado: replay, aceite, fonte parcial e agregado sem depend√
     });
     expect(c.json().reconciliation.acceptedSegments).toBeGreaterThan(0);
     const before = (
-      await app.inject('/api/v1/official/comparison?at=2026-10-03T00:30:00.000Z')
+      await app.inject('/api/v1/live/official/comparison?at=2026-10-03T00:30:00.000Z')
     ).json();
     expect(before.reconciliation.acceptedSegments).toBe(0);
     expect(
-      (await app.inject('/api/v1/official/comparison?at=2026-10-02T00:00:00.000Z')).json()
+      (await app.inject('/api/v1/live/official/comparison?at=2026-10-02T00:00:00.000Z')).json()
         .comparison,
     ).toBeNull();
-    expect((await app.inject('/api/v1/official/comparison?territory=xx')).statusCode).toBe(400);
-    expect((await app.inject('/api/v1/official/results')).json().snapshots).toHaveLength(1);
+    expect((await app.inject('/api/v1/live/official/comparison?territory=xx')).statusCode).toBe(
+      400,
+    );
+    expect((await app.inject('/api/v1/live/official/snapshots')).json()).toHaveLength(1);
     expect(
-      (await app.inject('/api/v1/official/results?at=2026-10-03T00:05:00.000Z')).json().snapshots,
+      (await app.inject('/api/v1/live/official/snapshots?at=2026-10-03T00:05:00.000Z')).json(),
     ).toHaveLength(0);
     rmSync(historyPath);
-    expect((await app.inject('/api/v1/official/comparison')).statusCode).toBe(503);
-    expect((await app.inject('/api/v1/official/results')).json().snapshots).toHaveLength(1);
+    expect((await app.inject('/api/v1/live/official/comparison')).statusCode).toBe(503);
+    expect((await app.inject('/api/v1/live/official/snapshots')).json()).toHaveLength(1);
     expect((await app.inject('/api/v1/latest')).json().environment).toBe('fixture');
   } finally {
     await app.close();

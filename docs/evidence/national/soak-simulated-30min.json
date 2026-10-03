@@ -1,0 +1,22 @@
+{
+  "environment": "simulated",
+  "command": "COLLECT_SECONDS=1800 pnpm collect:simulated:live (+ API compilada lida a cada 20 s: bootstrap, map, latest)",
+  "startedAt": "2026-10-03T22:45:08.713Z",
+  "endedAt": "2026-10-03T23:15:08.137Z",
+  "requests": 26641,
+  "byStatus": { "304": 26640, "0": 1 },
+  "errors": [
+    {
+      "job": "simulated:21270:1:zone:pe:23086:0034",
+      "at": "2026-10-03T23:10:48.876Z",
+      "error": "The operation was aborted due to timeout",
+      "outcome": "backoff e nova tentativa; sem efeito na taxa (abaixo de 5%)"
+    }
+  ],
+  "rateEvents": "start:10 → ramp 20…80 em 105 s; sem redução",
+  "maxStartsInAny1sWindow": 83,
+  "latencyMs": { "p50": 481, "p95": 737, "max": 20016 },
+  "sqlite": { "dbBytesStart": 80629760, "dbBytesEnd": 87539712, "walBytesMax": 4152992 },
+  "readerMs": { "avg": 200, "max": 302, "samples": 87 },
+  "limits": "Conteúdo do simulado estável (304): comprova estabilidade, checkpoint do WAL e leitura concorrente; não mede crescimento de corpos quando os resultados mudam."
+}

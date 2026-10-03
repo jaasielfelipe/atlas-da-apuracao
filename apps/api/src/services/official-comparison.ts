@@ -1,19 +1,15 @@
 import Database from 'better-sqlite3';
 import { existsSync, readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
-import type { FastifyInstance } from 'fastify';
+import type { FastifyReply, FastifyRequest } from 'fastify';
 import { z } from 'zod';
 import { ZoneStore } from '../db/zones';
 import { attachAcceptedHistory } from '../db/territorial';
 import { compareZones, type ZoneDataset } from '../../../../packages/domain/src/zones';
 import { rawDigest } from '../../../../packages/tse/src/index';
 
-export function registerOfficialComparison(
-  app: FastifyInstance,
-  path: string,
-  historyPath: string,
-  root: string,
-) {
+/** Comparison handler for the official collection database; mounted by the dashboard routes. */
+export function officialComparisonHandler(path: string, historyPath: string, root: string) {
   // attachAcceptedHistory only appends the (static) historical rows/matches valid at `at`;
   // cache them per registry + audit set. Timeline points are immutable once their instant has
   // passed (captures are append-only, no future information), so cache those per instant too.
@@ -22,7 +18,7 @@ export function registerOfficialComparison(
     { results: ZoneDataset['results']; matches: ZoneDataset['matches'] }
   >();
   const timelineCache = new Map<string, ReturnType<typeof compareZones>>();
-  app.get('/api/v1/official/comparison', async (request, reply) => {
+  return async (request: FastifyRequest, reply: FastifyReply) => {
     const q = z
       .object({
         territory: z
@@ -186,5 +182,5 @@ export function registerOfficialComparison(
       history.close();
       db.close();
     }
-  });
+  };
 }

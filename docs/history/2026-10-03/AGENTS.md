@@ -41,11 +41,23 @@ Construir um painel **local, de usuário único**, para a apuração das Eleiç�
 - Se fonte/schema não estiver disponível, criar adapter desacoplado e modo fixture; **não inventar** contrato oficial ou dados reais.
 - Registrar separadamente evidências sintéticas, simulado TSE e ambiente oficial. Declarar explicitamente se coleta e conciliação nacional por zonas foram validadas no oficial; sucesso com fixtures nunca basta para essa declaração.
 
+## Estado implementado após início das 21h de 02/10/2026
+
+Motor zonal puro e fluxo SQLite/API/UI disponíveis somente em fixture; migrations 002/003 preservam o agregado anterior. Históricos reais estão em banco separado (`data/history/atlas-history.sqlite`) e permanecem `pending_reconciliation`. Prova estrutural de nove ZEs do Acre está em `review`, sem auditoria de reorganizações. Em 03/10, migration 004 adicionou fila/cache persistidos e transporte HTTP validável, ainda sem polling nacional nem ingestão zonal real habilitados. Não habilitar capacidade oficial a partir desses testes. Consulte `docs/VALIDACAO.md` e `docs/OPERACAO.md` antes de continuar.
+
 ## Fonte de referência
 
 TSE: https://www.tse.jus.br/eleicoes/informacoes-tecnicas-sobre-a-divulgacao-de-resultados
 
 Confira `docs/CONTRATOS_E_TESTES.md` para cenários de verificação e checklists. Atualize a documentação quando uma hipótese técnica for confirmada por arquivos reais.
+
+### Atualização de desempenho — 03/10/2026
+
+Coletor incremental/concorrente e migration 005 implementados; medições locais e amostras HTTP do simulado em `docs/OTIMIZACAO_COLETA_NACIONAL.md`. Lease é por banco; todos os feeds devem compartilhar o mesmo serviço. Painel continua fixture; não habilitar oficial com base no benchmark. Inventário nacional real encontrou 2.580 ZEs de composição igual, ainda review e sem promoção a verified. Auditoria territorial e integração nacional normalizada continuam pendentes.
+
+### Integração de ingestão e consulta do simulado — 03/10/2026
+
+`NationalCollection` prepara o universo nacional e integra EA14/EA15, agregados e ingestão zonal normalizada. `collect:simulated` executa ensaio limitado em banco separado. Três janelas somaram 342 HTTP sem erros, 56 agregados e 22 segmentos do Acre (8 ZEs completas); não é validação zonal nacional. `/simulated` é consulta somente leitura desse acervo, sem coleta automática. Painel principal continua fixture; comparação real/ativação oficial e auditoria territorial continuam pendentes.
 
 ## Decisão operacional vigente — 03/10/2026
 
@@ -57,10 +69,6 @@ O aceite é imutável, vale para o cadastro e imports vinculados e só entra no 
 
 O usuário determinou: “TSE asks for maximum of 100 requests per second. we may use this with some safety range (let's say, 80 requests per second)”. Esta decisão substitui o padrão 2–5 req/s da regra 5 **somente** para a coleta contínua (`collect:official:live` / `collect:simulated:live`). Teto rígido em código: `MAX_RPS = 80` inícios/s (`packages/tse/src/collector.ts`), rajada GCRA ≤ 4 (nenhuma janela de 1 s acima de 84), até 128 em voo; 304 continua contando. A taxa sobe em rampa (10 → 80, +10 a cada 15 s limpos), cai à metade com >5% de erros 5xx/rede e vai ao piso com 403/429, além da pausa global ≥10 min. Um único coletor por máquina/IP (lock com PID), nunca oficial e simulado simultâneos. Ensaios limitados (`collect:official`/`collect:simulated`) mantêm o perfil conservador. Toolchain local: Node 24 LTS + pnpm 11.19.0 instalados na máquina.
 
-## Estado atual — 03/10/2026, noite
+### Estado para 04/10/2026 — atualizado em 03/10/2026, 19h30 BRT
 
-- **Coleta:** `collect:official:live` / `collect:simulated:live` contínuos sob a decisão de 80 req/s; ensaiados no simulado (varredura nacional em ~2 min 21 s, 0 erros; soak de 30 min), queda/reinício e fumaça oficial. Ensaios limitados de 2 req/s preservados.
-- **Painel:** uma única API (`apps/api/src/services/dashboard.ts`) para fixture (`/api/v1`) e acervos ao vivo (`/api/v1/live/<env>`); frontend em `/`, `/live/official`, `/live/simulated` (malha municipal IBGE de todas as UFs; favoritos sincronizam o coletor). As antigas páginas de acervo foram incorporadas ao painel.
-- **Comparação:** históricos finais 2018/2022 em `data/history/atlas-history.sqlite` com o aceite do usuário acima; 2026 exige EA20 consistente e ZE inteira concluída.
-- **Não comprovado:** coleta e conciliação nacional oficial com resultados (TSE publica após 17h de 04/10/2026). Declarar somente com base no acervo oficial.
-- Antes de continuar: [docs/README.md](docs/README.md), [docs/OPERACAO.md](docs/OPERACAO.md), [docs/VALIDACAO.md](docs/VALIDACAO.md) (resumo no topo) e [docs/CHECKLIST_DOMINGO.md](docs/CHECKLIST_DOMINGO.md). Estados datados anteriores: `docs/history/2026-10-03/AGENTS.md`.
+Coleta contínua (`collect:official:live`) ensaiada no simulado (varredura nacional em ~2 min 21 s, 0 erros), queda/reinício e fumaça oficial de 30 s. Painel principal ao vivo em `/live/official` (malha municipal IBGE de todas as UFs, favoritos sincronizados com o coletor). Operação do domingo: `docs/CHECKLIST_DOMINGO.md`. Coleta/conciliação nacional oficial com resultados ainda não comprovada (publicação só após 17h de 04/10).
