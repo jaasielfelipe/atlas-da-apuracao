@@ -164,3 +164,58 @@ it('run() sustenta ~80 req/s em tempo real sem exceder taxa + rajada e registra 
     rmSync(folder, { recursive: true, force: true });
   }
 }, 15_000);
+it('lease expirado de coletor que caiu não bloqueia o próximo; lease válido bloqueia', async () => {
+  const store = new Store(':memory:');
+  let now = 1_000_000;
+  try {
+    const crashed = new PersistentCollector(store, () => now);
+    crashed.queue.add({ key: 'a', url: 'fixture:a', kind: 'zone', priority: 0 });
+    crashed.save();
+    store.db.prepare("INSERT INTO collector_owner VALUES(1,'dead-owner',?)").run(now + 60_000);
+    const next = new PersistentCollector(store, () => now);
+    await expect(next.tick(async () => ({ status: 200, bytes: 2, raw: '{}' }))).rejects.toThrow(
+      'Outro coletor',
+    );
+    now += 60_001;
+    const result = await next.tick(async () => ({ status: 200, bytes: 2, raw: '{}' }));
+    expect(result?.status).toBe(200);
+    expect(next.cached('a')).toBe('{}');
+  } finally {
+    store.close();
+  }
+});
+it('indisponibilidade 5xx/rede: run() não cai, taxa cai à metade e unidades voltam após backoff', async () => {
+  const store = new Store(':memory:');
+  try {
+    const collector = new PersistentCollector(store, Date.now, {
+      intervalMs: 1000 / MAX_RPS,
+      maxInFlight: 32,
+      burst: 4,
+      pollMs: 600_000,
+    });
+    for (let i = 0; i < 200; i++)
+      collector.queue.add({ key: `z${i}`, url: `fixture:${i}`, kind: 'zone', priority: 0 });
+    const rate = new RateController({ target: MAX_RPS, start: MAX_RPS }, Date.now());
+    const stop = new AbortController();
+    setTimeout(() => stop.abort(), 1500);
+    let calls = 0;
+    await collector.run(
+      async (job) => {
+        calls++;
+        if (Number(job.key.slice(1)) % 2) throw Error('ECONNRESET');
+        return { status: 503, bytes: 0 };
+      },
+      stop.signal,
+      undefined,
+      rate,
+    );
+    expect(calls).toBeGreaterThan(20);
+    expect(rate.current).toBeLessThan(MAX_RPS);
+    expect(rate.events.some((e) => e.reason === 'errors')).toBe(true);
+    const failed = [...collector.queue.jobs.values()].filter((j) => j.failures > 0);
+    expect(failed.length).toBe(calls);
+    expect(failed.every((j) => !j.suspended)).toBe(true); // backoff, never a 404-style suspension
+  } finally {
+    store.close();
+  }
+}, 15_000);

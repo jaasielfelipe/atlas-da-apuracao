@@ -91,10 +91,11 @@ export class PersistentCollector {
     this.queue.persisted();
   }
   private assertOwner() {
-    const lease = this.store.db.prepare('SELECT owner FROM collector_owner WHERE id=1').get() as
-      | { owner: string }
-      | undefined;
-    if (lease && lease.owner !== this.owner)
+    const lease = this.store.db
+      .prepare('SELECT owner,expires FROM collector_owner WHERE id=1')
+      .get() as { owner: string; expires: number } | undefined;
+    // An expired lease (owner crashed without releasing it) does not own the budget.
+    if (lease && lease.owner !== this.owner && lease.expires > this.now())
       throw Error('Outro coletor possui o orçamento deste banco');
   }
   cached(key: string) {

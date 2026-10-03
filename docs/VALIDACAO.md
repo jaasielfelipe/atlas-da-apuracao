@@ -251,3 +251,13 @@ Não é evidência de coleta oficial: o oficial só publica resultados após o e
 Implementado `registerLiveDashboard` (rotas `/api/v1/live/<env>/…`) e `App environment="official|simulated"` em `/live/<env>`. Teste de API com cadastro oficial capturado e agregado sintético roteado: isolamento de ambientes (fixture/simulado não veem oficial), território/cargo inválidos, mapa sem preencher ausência com zero, favoritos sincronizando o plano do coletor (agregado municipal ativado com pista imediata e suspenso ao remover). Total: **73 testes**, typecheck, build, prettier e **3 E2E** passaram.
 
 Validação visual com o acervo **simulado** real capturado no ensaio de 80 req/s: Brasil por UF (cores pelos três primeiros), cobertura 100% coerente com o agregado, malha municipal de SP, mobile 390 px sem overflow, sem erros de página ([BR](evidence/live-simulated-br.png), [cobertura](evidence/live-simulated-coverage.png), [mobile](evidence/live-simulated-mobile.png)). Malhas IBGE baixadas da API v3 (`qualidade=minima`), mesmo conteúdo do arquivo do Acre já versionado. Comparação oficial: carga histórica 744 ms e ~65–110 ms por ponto de timeline medidos; com cache, chamadas subsequentes ~0,27 s.
+
+## Ensaio de falhas e preparação para 04/10 — 03/10/2026
+
+- **Queda abrupta (simulado):** coletor contínuo encerrado com `taskkill /F` em plena rampa. O reinício recuperou o lock de PID morto e aguardou o lease (60 s), mas **falhou** em seguida: `assertOwner()` tratava lease expirado de outro dono como válido, bloqueando o banco até remoção manual. Corrigido (lease expirado não possui o orçamento) e coberto por teste. Novo reinício: retomou do SQLite (contador 8.599 → 8.964+, ETags reaproveitados, maioria 304), rampa normal, 0 erros, lock e lease liberados ao final.
+- **Indisponibilidade 5xx/rede:** teste de `run()` com transporte falhando: o loop não cai, a taxa cai à metade, unidades entram em backoff sem suspensão tipo 404.
+- **Oficial, fumaça de 30 s a ≤20 req/s (22:22Z):** EA11/EA12 redescobertos, cadastro `95a5a0a7530a` inalterado e vinculado ao banco existente, 432 respostas (289 × 200, 143 × 304), **0 erros**; 314 segmentos oficiais observados, 0 seções totalizadas (antes da votação, esperado); agregados sem mudança não geraram snapshots novos.
+- `pnpm backup official|simulated` gera cópia consistente com `integrity_check` ok com os bancos em uso.
+- Checklist do domingo: [CHECKLIST_DOMINGO.md](CHECKLIST_DOMINGO.md).
+
+Estado declarado: coleta oficial contínua **pronta para operação**; **não** há ainda comprovação de coleta/conciliação nacional oficial com resultados, porque o TSE só publica totalização após o encerramento da votação. Essa declaração deve ser feita no domingo com base no acervo oficial.

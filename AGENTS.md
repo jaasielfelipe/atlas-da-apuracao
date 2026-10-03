@@ -68,3 +68,7 @@ O aceite é imutável, vale para o cadastro e imports vinculados e só entra no 
 ## Decisão operacional vigente — taxa TSE, 03/10/2026
 
 O usuário determinou: “TSE asks for maximum of 100 requests per second. we may use this with some safety range (let's say, 80 requests per second)”. Esta decisão substitui o padrão 2–5 req/s da regra 5 **somente** para a coleta contínua (`collect:official:live` / `collect:simulated:live`). Teto rígido em código: `MAX_RPS = 80` inícios/s (`packages/tse/src/collector.ts`), rajada GCRA ≤ 4 (nenhuma janela de 1 s acima de 84), até 128 em voo; 304 continua contando. A taxa sobe em rampa (10 → 80, +10 a cada 15 s limpos), cai à metade com >5% de erros 5xx/rede e vai ao piso com 403/429, além da pausa global ≥10 min. Um único coletor por máquina/IP (lock com PID), nunca oficial e simulado simultâneos. Ensaios limitados (`collect:official`/`collect:simulated`) mantêm o perfil conservador. Toolchain local: Node 24 LTS + pnpm 11.19.0 instalados na máquina.
+
+### Estado para 04/10/2026 — atualizado em 03/10/2026, 19h30 BRT
+
+Coleta contínua (`collect:official:live`) ensaiada no simulado (varredura nacional em ~2 min 21 s, 0 erros), queda/reinício e fumaça oficial de 30 s. Painel principal ao vivo em `/live/official` (malha municipal IBGE de todas as UFs, favoritos sincronizados com o coletor). Operação do domingo: `docs/CHECKLIST_DOMINGO.md`. Coleta/conciliação nacional oficial com resultados ainda não comprovada (publicação só após 17h de 04/10).

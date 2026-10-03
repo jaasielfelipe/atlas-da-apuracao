@@ -43,6 +43,16 @@ function log(message: string) {
 let exitCode = 0;
 let heartbeat: NodeJS.Timeout | undefined;
 try {
+  // After a crash the previous owner's lease (60 s) may still be held. We already own the machine
+  // lock, so no other collector here uses it: wait for expiry instead of failing or breaking it.
+  for (;;) {
+    const lease = store.db.prepare('SELECT expires FROM collector_owner WHERE id=1').get() as
+      | { expires: number }
+      | undefined;
+    if (!lease || lease.expires <= Date.now() || stop.signal.aborted) break;
+    log(`lease anterior ainda válido até ${new Date(lease.expires).toISOString()}; aguardando`);
+    await new Promise((r) => setTimeout(r, Math.min(5_000, lease.expires - Date.now() + 50)));
+  }
   const { config, catalog } = await bootstrapSources(store, environment, stop.signal);
   const profile = { ...LIVE_PROFILE, intervalMs: 1000 / target, maxInFlight };
   const collection = new NationalCollection(store, environment, config, catalog, Date.now, profile);

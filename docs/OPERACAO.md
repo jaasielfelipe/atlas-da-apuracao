@@ -8,7 +8,7 @@ Atualizado em 02/10/2026, execução iniciada às 21h BRT. Leia `VALIDACAO.md` p
 
 Migrations 001→002→003 são transacionais e preservam o acervo agregado. A fixture zonal é inserida somente até o cursor capturado e independe de favoritos. Não apagar `data/atlas.sqlite` para atualizar a versão.
 
-Use `pnpm backup` para uma cópia consistente de `data/atlas.sqlite`, incluindo páginas no WAL. O script usa a API de backup do SQLite e verifica `integrity_check`. Saída em `data/backups/atlas-<instante>.sqlite`. Para experimentar uma cópia sem substituir o original, defina `ATLAS_DB` para o caminho dessa cópia antes de iniciar o servidor. Não copie apenas o arquivo principal enquanto há escritas no WAL.
+Use `pnpm backup [fixture|official|simulated]` (padrão fixture) para uma cópia consistente de `data/atlas.sqlite` ou do banco do coletor, incluindo páginas no WAL. O script usa a API de backup do SQLite e verifica `integrity_check`. Saída em `data/backups/atlas-<instante>.sqlite`. Para experimentar uma cópia sem substituir o original, defina `ATLAS_DB` para o caminho dessa cópia antes de iniciar o servidor. Não copie apenas o arquivo principal enquanto há escritas no WAL.
 
 ## Históricos reais — importação opt-in
 
