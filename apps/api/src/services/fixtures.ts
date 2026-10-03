@@ -3,6 +3,8 @@ import { resolve } from 'node:path';
 import type { Office, Territory } from '../../../../packages/domain/src/index';
 import { normalizeEA20, parseCatalog } from '../../../../packages/tse/src/index';
 import type { Store } from '../db/store';
+import { ZoneStore } from '../db/zones';
+import { zoneFixture } from '../../../../packages/domain/src/zone-fixture';
 
 export const ufCodes: Record<string, string> = {
   ro: '11',
@@ -58,6 +60,7 @@ export class FixtureService {
     );
     if (!store.getState('fixture:step'))
       for (let step = 0; step <= 2; step++) this.ingestStep(step);
+    new ZoneStore(store).insertFixture(zoneFixture(this.step));
   }
   get step() {
     return Number(this.store.getState('fixture:step') ?? '0');
@@ -183,6 +186,7 @@ export class FixtureService {
       for (const t of this.territories)
         if (t.kind !== 'municipality' || enabled.has(t.id)) this.ingestTerritory(t, step);
       this.store.setState('fixture:step', String(step));
+      new ZoneStore(this.store).insertFixture(zoneFixture(step));
     })();
   }
   advance() {

@@ -1,0 +1,191 @@
+{
+  "capturedAt": "2026-10-03T00:25:35.308Z",
+  "imports": [
+    {
+      "id": "2018:c495390fbb87d6c59374570fd9b81adebf19e983a5d3329bb1e82cdcd91c28ac",
+      "year": 2018,
+      "segments": 6240,
+      "candidates": 81120,
+      "status": "pending_reconciliation"
+    },
+    {
+      "id": "2022:2698d64e4b248a4b59de40eadcdbbc4a6a18d38f8baefa46b780ed7d634c001b",
+      "year": 2022,
+      "segments": 6283,
+      "candidates": 69113,
+      "status": "pending_reconciliation"
+    }
+  ],
+  "registryDigest": "95a5a0a7530a494e510baf6da17b048d234ec424af47a9c5c80ec4468e351d75",
+  "scope": "AC — prova estrutural; sem auditoria de reorganizações",
+  "audit": [
+    {
+      "zone": "0008",
+      "current": [
+        "01120",
+        "01511",
+        "01538"
+      ],
+      "historical2018": [
+        "01120",
+        "01511",
+        "01538"
+      ],
+      "historical2022": [
+        "01120",
+        "01511",
+        "01538"
+      ],
+      "status": "review",
+      "reason": "Igualdade cadastral não comprova ausência de reorganização"
+    },
+    {
+      "zone": "0006",
+      "current": [
+        "01570",
+        "01058",
+        "01112"
+      ],
+      "historical2018": [
+        "01058",
+        "01112",
+        "01570"
+      ],
+      "historical2022": [
+        "01058",
+        "01112",
+        "01570"
+      ],
+      "status": "review",
+      "reason": "Igualdade cadastral não comprova ausência de reorganização"
+    },
+    {
+      "zone": "0009",
+      "current": [
+        "01007",
+        "01392"
+      ],
+      "historical2018": [
+        "01007",
+        "01392"
+      ],
+      "historical2022": [
+        "01007",
+        "01392"
+      ],
+      "status": "review",
+      "reason": "Igualdade cadastral não comprova ausência de reorganização"
+    },
+    {
+      "zone": "0002",
+      "current": [
+        "01015",
+        "01490"
+      ],
+      "historical2018": [
+        "01015",
+        "01490"
+      ],
+      "historical2022": [
+        "01015",
+        "01490"
+      ],
+      "status": "review",
+      "reason": "Igualdade cadastral não comprova ausência de reorganização"
+    },
+    {
+      "zone": "0004",
+      "current": [
+        "01074",
+        "01040",
+        "01090",
+        "01066",
+        "01082"
+      ],
+      "historical2018": [
+        "01040",
+        "01066",
+        "01074",
+        "01082",
+        "01090"
+      ],
+      "historical2022": [
+        "01040",
+        "01066",
+        "01074",
+        "01082",
+        "01090"
+      ],
+      "status": "review",
+      "reason": "Igualdade cadastral não comprova ausência de reorganização"
+    },
+    {
+      "zone": "0007",
+      "current": [
+        "01139"
+      ],
+      "historical2018": [
+        "01139"
+      ],
+      "historical2022": [
+        "01139"
+      ],
+      "status": "review",
+      "reason": "Igualdade cadastral não comprova ausência de reorganização"
+    },
+    {
+      "zone": "0005",
+      "current": [
+        "01104",
+        "01473"
+      ],
+      "historical2018": [
+        "01104",
+        "01473"
+      ],
+      "historical2022": [
+        "01104",
+        "01473"
+      ],
+      "status": "review",
+      "reason": "Igualdade cadastral não comprova ausência de reorganização"
+    },
+    {
+      "zone": "0003",
+      "current": [
+        "01554",
+        "01031",
+        "01457"
+      ],
+      "historical2018": [
+        "01031",
+        "01457",
+        "01554"
+      ],
+      "historical2022": [
+        "01031",
+        "01457",
+        "01554"
+      ],
+      "status": "review",
+      "reason": "Igualdade cadastral não comprova ausência de reorganização"
+    },
+    {
+      "zone": "0001",
+      "current": [
+        "01023",
+        "01392"
+      ],
+      "historical2018": [
+        "01023",
+        "01392"
+      ],
+      "historical2022": [
+        "01023",
+        "01392"
+      ],
+      "status": "review",
+      "reason": "Igualdade cadastral não comprova ausência de reorganização"
+    }
+  ]
+}

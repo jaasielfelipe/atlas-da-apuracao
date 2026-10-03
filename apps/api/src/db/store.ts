@@ -35,7 +35,31 @@ export class Store {
         this.db.prepare('INSERT INTO migration VALUES(1, ?)').run(new Date().toISOString());
         this.db.pragma('user_version = 1');
       })();
-    else if (version !== 1) throw Error('Versão do banco não suportada');
+    else if (![1, 2, 3, 4].includes(Number(version))) throw Error('Versão do banco não suportada');
+    if (Number(version) < 2)
+      this.db.transaction(() => {
+        this.db.exec(
+          readFileSync(resolve(root, 'apps/api/src/db/migrations/002_zones.sql'), 'utf8'),
+        );
+        this.db.prepare('INSERT INTO migration VALUES(2, ?)').run(new Date().toISOString());
+        this.db.pragma('user_version = 2');
+      })();
+    if (Number(version) < 3)
+      this.db.transaction(() => {
+        this.db.exec(
+          readFileSync(resolve(root, 'apps/api/src/db/migrations/003_historical.sql'), 'utf8'),
+        );
+        this.db.prepare('INSERT INTO migration VALUES(3, ?)').run(new Date().toISOString());
+        this.db.pragma('user_version = 3');
+      })();
+    if (Number(version) < 4)
+      this.db.transaction(() => {
+        this.db.exec(
+          readFileSync(resolve(root, 'apps/api/src/db/migrations/004_collector.sql'), 'utf8'),
+        );
+        this.db.prepare('INSERT INTO migration VALUES(4, ?)').run(new Date().toISOString());
+        this.db.pragma('user_version = 4');
+      })();
   }
   insert(snapshot: Snapshot, raw: string) {
     validatePhase(snapshot.phase, snapshot.environment);

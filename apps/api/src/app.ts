@@ -6,6 +6,8 @@ import { resolve } from 'node:path';
 import type { Bootstrap, Office } from '../../../packages/domain/src/index';
 import { Store } from './db/store';
 import { FixtureService } from './services/fixtures';
+import { ZoneStore } from './db/zones';
+import { compareZones } from '../../../packages/domain/src/zones';
 
 const atSchema = z.string().datetime({ precision: 3 }).optional();
 const querySchema = z.object({
@@ -65,7 +67,7 @@ export async function createApp(
     async (): Promise<Bootstrap> => ({
       environment: 'fixture',
       dataset: fixtures.scenario.description,
-      capabilities: { officialCollection: false, cohort: false, historical: false },
+      capabilities: { officialCollection: false, cohort: true, historical: false },
       territories: fixtures.territories,
       watchlist: store.watchlist('fixture'),
       captures: store.captures('fixture'),
@@ -169,6 +171,33 @@ export async function createApp(
   });
   app.get('/api/v1/comparison', async (request) => {
     const q = parameters(request.query);
+    if (q.office === 'president') {
+      const at = q.at ?? store.captures('fixture').at(-1)!;
+      const dataset = new ZoneStore(store).load('fixture', at);
+      const scope = {
+        uf: q.selected.uf ?? undefined,
+        municipality: q.selected.tseCode ?? undefined,
+      };
+      const comparison = dataset ? compareZones(dataset, at, scope) : null;
+      return {
+        environment,
+        status: comparison?.status ?? 'pending_validation',
+        basis: 'historical_zone_cohort',
+        unitKind: q.selected.kind === 'municipality' ? 'municipality_zone' : 'whole_zone',
+        officialStatus: 'pending_validation',
+        candidateStatus: 'synthetic_mapping',
+        cohort: { enabled: true, status: 'fixture_only' },
+        comparison,
+        timeline: dataset
+          ? store
+              .captures('fixture')
+              .filter((t) => t <= at)
+              .map((t) => compareZones(dataset, t, scope))
+          : [],
+        method:
+          'Cadastro e correspondência sintéticos explícitos; não provam identidade de seções, eleitores ou limites. Recorte de demonstração: 3 zonas no Acre, 6 segmentos. Exterior fora da fixture. Coleta e conciliação nacional oficial não validadas.',
+      };
+    }
     return {
       environment,
       status: 'unavailable',

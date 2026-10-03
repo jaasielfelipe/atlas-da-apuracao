@@ -67,7 +67,17 @@ export const ea12Schema = z
     ),
   })
   .passthrough();
-const sections = z.object({ ts: count, st: count, snt: count }).passthrough();
+const sections = z
+  .object({
+    ts: count,
+    st: count,
+    snt: count,
+    si: count.optional(),
+    sni: count.optional(),
+    sa: count.optional(),
+    sna: count.optional(),
+  })
+  .passthrough();
 const electorate = z
   .object({ te: count, est: count, esi: count, c: count, a: count })
   .passthrough();
@@ -91,7 +101,7 @@ export const ea20Schema = z
     ...meta,
     ele: id,
     t: z.enum(['1', '2']),
-    tpabr: z.enum(['br', 'uf', 'mu']),
+    tpabr: z.enum(['br', 'uf', 'mu', 'zona']),
     cdabr: z.string(),
     dt: z.string(),
     ht: z.string(),

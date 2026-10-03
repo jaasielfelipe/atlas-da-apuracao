@@ -68,10 +68,10 @@ describe('Etapa 1: SQLite e API local em fixture', () => {
     );
     expect(store.db.prepare('SELECT COUNT(*) n FROM snapshot').get()).toEqual(before);
     const unavailable = (await app.inject('/api/v1/comparison')).json();
-    expect(unavailable.candidateStatus).toBe('candidate_unresolved');
-    expect(unavailable.cohort.enabled).toBe(false);
+    expect(unavailable.candidateStatus).toBe('synthetic_mapping');
+    expect(unavailable.officialStatus).toBe('pending_validation');
   });
-  it('comparação zonal pendente distingue ZE de segmento sem fabricar métricas ou coletas', async () => {
+  it('comparação zonal sintética distingue ZE de segmento e não habilita o oficial', async () => {
     const { app, store } = await setup();
     const snapshotsBefore = store.db.prepare('SELECT COUNT(*) n FROM snapshot').get();
     for (const [territory, unitKind] of [
@@ -83,20 +83,37 @@ describe('Etapa 1: SQLite e API local em fixture', () => {
       expect(response.statusCode).toBe(200);
       expect(response.json()).toMatchObject({
         environment: 'fixture',
-        status: 'unavailable',
+        status: 'ready',
         basis: 'historical_zone_cohort',
         unitKind,
-        candidateStatus: 'candidate_unresolved',
-        cohort: { enabled: false, status: 'pending_validation' },
+        candidateStatus: 'synthetic_mapping',
+        cohort: { enabled: true, status: 'fixture_only' },
+        officialStatus: 'pending_validation',
       });
-      expect(response.json()).not.toHaveProperty('leaders');
-      expect(response.json()).not.toHaveProperty('transitions');
-      expect(response.json()).not.toHaveProperty('series');
+      expect(response.json().comparison.coverage.comparable).toBe(territory === 'ac:01120' ? 1 : 3);
+      expect(response.json().comparison.transitions[2018].matrix).toHaveLength(4);
     }
     expect(store.db.prepare('SELECT COUNT(*) n FROM snapshot').get()).toEqual(snapshotsBefore);
     expect(store.watchlist('fixture')).toEqual([]);
     const governor = (await app.inject('/api/v1/comparison?office=governor&territory=ac')).json();
     expect(governor.cohort).toMatchObject({ enabled: false, status: 'out_of_scope' });
+  });
+  it('coorte persiste normalizada; correção e replay recalculam sem escrita', async () => {
+    const { app, store } = await setup();
+    const old = (await app.inject('/api/v1/comparison?at=2026-10-02T17:10:00.000Z')).json();
+    expect(old.comparison.coverage.comparable).toBe(1);
+    expect(old.timeline).toHaveLength(2);
+    const before = store.db.prepare('SELECT COUNT(*) n FROM zone_result').get();
+    await app.inject('/api/v1/comparison');
+    expect(store.db.prepare('SELECT COUNT(*) n FROM zone_result').get()).toEqual(before);
+    await app.inject({ method: 'POST', url: '/api/v1/fixture/advance' });
+    expect((await app.inject('/api/v1/comparison')).json().comparison.coverage.comparable).toBe(2);
+    expect((await app.inject('/api/v1/comparison?at=2026-10-02T17:10:00.000Z')).json()).toEqual(
+      old,
+    );
+    expect(() => store.db.exec('UPDATE zone_result SET valid=0')).toThrow('imutáveis');
+    expect(() => store.db.exec('DELETE FROM zone_candidate_vote')).toThrow('imutáveis');
+    expect(store.db.pragma('user_version', { simple: true })).toBe(4);
   });
   it('WAL persiste snapshots, favoritos e cursor após reinício sem duplicação', async () => {
     const directory = mkdtempSync(join(tmpdir(), 'atlas-test-'));

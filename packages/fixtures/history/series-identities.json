@@ -1,0 +1,23 @@
+{
+  "status": "observed_not_runtime_enabled",
+  "method": "IDs, números e nomes completos conferidos em registros TSE capturados; nenhum fuzzy matching. Revalidar a eleição e hashes antes de ativar coleta oficial.",
+  "2018": {
+    "election": "295",
+    "sourceManifest": "2018-manifest.json",
+    "bolsonaro": {"id": "280000614517", "number": "17", "name": "JAIR MESSIAS BOLSONARO"},
+    "lula_haddad": {"id": "280000629808", "number": "13", "name": "FERNANDO HADDAD"}
+  },
+  "2022": {
+    "election": "544",
+    "sourceManifest": "2022-manifest.json",
+    "bolsonaro": {"id": "280001618036", "number": "22", "name": "JAIR MESSIAS BOLSONARO"},
+    "lula_haddad": {"id": "280001607829", "number": "13", "name": "LUIZ INÁCIO LULA DA SILVA"}
+  },
+  "2026": {
+    "election": "6257",
+    "sourceFile": "../zonal/official-ac01120-z0008.json",
+    "rawSha256": "0f5feac5f2dd8c37d03774904121567eb0d298693f2bf3fe677c365e7c4f9232",
+    "bolsonaro": {"id": "280002551544", "number": "22", "name": "FLAVIO NANTES BOLSONARO"},
+    "lula_haddad": {"id": "280002542548", "number": "13", "name": "LUIZ INÁCIO LULA DA SILVA"}
+  }
+}

@@ -182,7 +182,23 @@ Detalhes e evidências em [VALIDACAO.md](VALIDACAO.md). Registro anterior ao Adi
 
 - [x] Especificação 1.1, AGENTS.md e contratos reorientados para EA20 município–zona, ZE completa, lideranças e transições; originais arquivados, aditivo preservado.
 - [x] Caminho crítico BU removido da comparação; fontes/fixtures/testes anteriores continuam válidos no respectivo escopo.
-- [ ] Execução dos novos casos de fonte/completude/coorte/lideranças/matrizes/timeline zonal de C.A–C.F: pendente. Testes de indisponibilidade não são testes dessas funcionalidades.
+- [x] Execução inicial dos casos zonais com fixtures e recortes TSE, discriminada abaixo; não equivale à aprovação integral de C.A–C.F no oficial.
 - [ ] Coleta e conciliação nacional zonal oficial: **não validadas**.
 
 Registrar ajustes de contrato/texto da aplicação e regressões desta revisão em `VALIDACAO.md`, com comandos efetivamente executados. Não transformar este checklist de requisitos em relatório de testes aprovados.
+
+## I. Evidência executável adicionada às 21h de 02/10/2026
+
+O checklist G descreve a entrega anterior. A comparação atual está ativa **somente em fixture**; `officialStatus=pending_validation`, `historical=false` no bootstrap significa que a aplicação não habilitou os históricos reais importados no banco separado.
+
+| Teste | Casos cobertos e limite |
+|---|---|
+| `packages/tse/src/zones.test.ts` | Hashes de seis downloads, path via EA11, vínculo município/URL, três segmentos da ZE0008 AC, fase incompatível, exceção sni=1 em revisão e oficial st=0 parcial. Não comprova conclusão oficial positiva |
+| `packages/domain/src/zones.test.ts` | ZB01/02/07, ZC01–04, ZD01–07, ZE01/02/06/07 em cenários sintéticos: completude, terceiros, empate, denominador zero, pesos diferentes, duplicação, retificação e revogação de match. Exemplo ZD05 6/4→5/5 com fluxos 2 e 1 executado |
+| `packages/tse/src/history.test.ts` | CSV reais AC, Windows-1252, todos os 13/11 candidatos, IDs com zeros preservados, ano errado/duplicação/truncamento rejeitados; igualdade estrutural exige auditoria adicional. Não certifica reorganizações |
+| `apps/api/src/db/zones.test.ts` | Upgrade v1→v3 preserva estado; deduplicação/reinício; isolamento; histórico normalizado imutável e sem match automático |
+| `apps/api/src/app.test.ts` | API fixture diferencia ZE/segmento, leitura sem escrita, replay e reversão após correção, capacidades oficiais fechadas |
+| `packages/tse/src/collector.test.ts` | Parte de ZE09/11: orçamento, 304, cache condicional, 404 suspenso, pausa 429, backoff e justiça entre favoritos/não favoritos com transporte simulado. Não é teste de coletor de produção |
+| E2E offline | Camadas, mapa, seis shares, matriz 4×4 com seletor, contagens, tabela, timeline, replay, favoritos, falhas e desktop/mobile; nenhuma chamada externa |
+
+Pendentes para aceite integral: conclusão positiva no oficial, demais exceções, correspondência nacional auditada e exterior, transporte/cache/fila persistida reais, deduplicação real de HTTP 200, métricas de atraso/defasagem, camada cartográfica comparativa, exportação analítica e histórico final de referência territorial. Não usar esta tabela para marcar os casos restantes como aprovados.

@@ -41,6 +41,10 @@ Construir um painel **local, de usuário único**, para a apuração das Eleiç�
 - Se fonte/schema não estiver disponível, criar adapter desacoplado e modo fixture; **não inventar** contrato oficial ou dados reais.
 - Registrar separadamente evidências sintéticas, simulado TSE e ambiente oficial. Declarar explicitamente se coleta e conciliação nacional por zonas foram validadas no oficial; sucesso com fixtures nunca basta para essa declaração.
 
+## Estado implementado após início das 21h de 02/10/2026
+
+Motor zonal puro e fluxo SQLite/API/UI disponíveis somente em fixture; migrations 002/003 preservam o agregado anterior. Históricos reais estão em banco separado (`data/history/atlas-history.sqlite`) e permanecem `pending_reconciliation`. Prova estrutural de nove ZEs do Acre está em `review`, sem auditoria de reorganizações. Em 03/10, migration 004 adicionou fila/cache persistidos e transporte HTTP validável, ainda sem polling nacional nem ingestão zonal real habilitados. Não habilitar capacidade oficial a partir desses testes. Consulte `docs/VALIDACAO.md` e `docs/OPERACAO.md` antes de continuar.
+
 ## Fonte de referência
 
 TSE: https://www.tse.jus.br/eleicoes/informacoes-tecnicas-sobre-a-divulgacao-de-resultados

@@ -37,11 +37,25 @@ test('fluxo offline: mapa, captura, replay, favoritos, falhas e layout', async (
   await page.getByRole('tab', { name: 'Cobertura' }).click();
   await expect(page.locator('.metric').first()).toContainText('0,0%');
   await page.getByRole('tab', { name: 'Comparação' }).click();
-  await expect(page.getByRole('heading', { name: 'Comparação indisponível' })).toBeVisible();
+  await expect(
+    page.getByRole('heading', { name: 'Comparação territorial', exact: true }),
+  ).toBeVisible();
   await expect(page.getByText('Zonas concluídas e conciliadas', { exact: true })).toBeVisible();
-  await expect(page.getByText('Desativada · coleta zonal nacional não validada')).toBeVisible();
+  await expect(page.getByText('Fixture ativa · coleta zonal nacional não validada')).toBeVisible();
+  await expect(page.getByTestId('zone-cohort')).toContainText('0 comparáveis');
   await expect(page.getByLabel('Instante da timeline')).toHaveValue('0');
-  await page.screenshot({ path: 'docs/evidence/fixture-comparison-pending.png', fullPage: true });
+  await page.getByLabel('Instante da timeline').fill('2');
+  await expect(page.getByTestId('zone-cohort')).toContainText('3 comparáveis');
+  await expect(page.getByTestId('transition-matrix').locator('tbody tr')).toHaveCount(4);
+  await page.getByLabel('Ano da matriz').selectOption('2022');
+  await expect(page.getByTestId('transition-matrix').locator('caption')).toContainText('2022');
+  await page.screenshot({ path: 'docs/evidence/fixture-comparison-zones.png', fullPage: true });
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.screenshot({ path: 'docs/evidence/fixture-comparison-mobile.png', fullPage: true });
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(
+    true,
+  );
+  await page.setViewportSize({ width: 1440, height: 1050 });
   await page.getByRole('tab', { name: 'Resultado' }).click();
   await page.getByRole('button', { name: 'Agora', exact: true }).click();
   await expect(votes).toHaveText(initial!);

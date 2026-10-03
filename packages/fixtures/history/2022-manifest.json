@@ -1,0 +1,84 @@
+{
+  "year": 2022,
+  "election": "544",
+  "encoding": "windows-1252",
+  "sha256": "2698d64e4b248a4b59de40eadcdbbc4a6a18d38f8baefa46b780ed7d634c001b",
+  "imported": 69113,
+  "skipped": 12566,
+  "destinations": [
+    "Válido"
+  ],
+  "segments": 6283,
+  "valid": 118229719,
+  "candidates": [
+    {
+      "id": "280001612393",
+      "number": "12",
+      "name": "CIRO FERREIRA GOMES"
+    },
+    {
+      "id": "280001618036",
+      "number": "22",
+      "name": "JAIR MESSIAS BOLSONARO"
+    },
+    {
+      "id": "280001607831",
+      "number": "16",
+      "name": "VERA LUCIA PEREIRA DA SILVA SALGADO"
+    },
+    {
+      "id": "280001644128",
+      "number": "44",
+      "name": "SORAYA VIEIRA THRONICKE"
+    },
+    {
+      "id": "280001600167",
+      "number": "21",
+      "name": "SOFIA PADUA MANZANO"
+    },
+    {
+      "id": "280001677435",
+      "number": "27",
+      "name": "JOSE MARIA EYMAEL"
+    },
+    {
+      "id": "280001603612",
+      "number": "30",
+      "name": "LUIZ FELIPE CHAVES D AVILA"
+    },
+    {
+      "id": "280001734029",
+      "number": "14",
+      "name": "KELMON LUIS DA SILVA SOUZA"
+    },
+    {
+      "id": "280001607833",
+      "number": "15",
+      "name": "SIMONE NASSAR TEBET"
+    },
+    {
+      "id": "280001607829",
+      "number": "13",
+      "name": "LUIZ INÁCIO LULA DA SILVA"
+    },
+    {
+      "id": "280001602702",
+      "number": "80",
+      "name": "LEONARDO PÉRICLES VIEIRA ROQUE"
+    }
+  ],
+  "download": {
+    "year": 2022,
+    "url": "https://cdn.tse.jus.br/estatistica/sead/odsele/votacao_candidato_munzona/votacao_candidato_munzona_2022.zip",
+    "capturedAt": "2026-10-03T00:18:13.342Z",
+    "bytes": 556154774,
+    "sha256": "b45f00a83b43d33ba6e0efd8d19df646674e5130260597b5caa8585f6e1a70e2",
+    "etag": "\"21263f96-65cd66a0536fe\""
+  },
+  "excerpt": {
+    "file": "2022-ac.csv",
+    "sha256": "a45ff9ed451e2735a1a64770becfe1e12631142d93c7dfaa6fa0e5b8a8c29f2d",
+    "rows": 253,
+    "transformation": "AC, turno 1; quoting uniforme; bytes Windows-1252/Latin-1 no recorte observado. Originais integrais em data/history."
+  }
+}

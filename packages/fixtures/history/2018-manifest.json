@@ -1,0 +1,94 @@
+{
+  "year": 2018,
+  "election": "295",
+  "encoding": "windows-1252",
+  "sha256": "c495390fbb87d6c59374570fd9b81adebf19e983a5d3329bb1e82cdcd91c28ac",
+  "imported": 81120,
+  "skipped": 12480,
+  "destinations": [
+    "Válido"
+  ],
+  "segments": 6240,
+  "valid": 107050749,
+  "candidates": [
+    {
+      "id": "280000618462",
+      "number": "19",
+      "name": "ALVARO FERNANDES DIAS"
+    },
+    {
+      "id": "280000601016",
+      "number": "50",
+      "name": "GUILHERME CASTRO BOULOS"
+    },
+    {
+      "id": "280000622281",
+      "number": "15",
+      "name": "HENRIQUE DE CAMPOS MEIRELLES"
+    },
+    {
+      "id": "280000605589",
+      "number": "12",
+      "name": "CIRO FERREIRA GOMES"
+    },
+    {
+      "id": "280000622171",
+      "number": "18",
+      "name": "MARIA OSMARINA MARINA DA SILVA VAZ DE LIMA"
+    },
+    {
+      "id": "280000607640",
+      "number": "30",
+      "name": "JOÃO DIONISIO FILGUEIRA BARRETO AMOEDO"
+    },
+    {
+      "id": "280000624085",
+      "number": "27",
+      "name": "JOSE MARIA EYMAEL"
+    },
+    {
+      "id": "280000602477",
+      "number": "45",
+      "name": "GERALDO JOSÉ RODRIGUES ALCKMIN FILHO"
+    },
+    {
+      "id": "280000614517",
+      "number": "17",
+      "name": "JAIR MESSIAS BOLSONARO"
+    },
+    {
+      "id": "280000601173",
+      "number": "16",
+      "name": "VERA LUCIA PEREIRA DA SILVA SALGADO"
+    },
+    {
+      "id": "280000602500",
+      "number": "51",
+      "name": "BENEVENUTO DACIOLO FONSECA DOS SANTOS"
+    },
+    {
+      "id": "280000624082",
+      "number": "54",
+      "name": "JOÃO VICENTE FONTELLA GOULART"
+    },
+    {
+      "id": "280000629808",
+      "number": "13",
+      "name": "FERNANDO HADDAD"
+    }
+  ],
+  "download": {
+    "year": 2018,
+    "url": "https://cdn.tse.jus.br/estatistica/sead/odsele/votacao_candidato_munzona/votacao_candidato_munzona_2018.zip",
+    "capturedAt": "2026-10-03T00:17:38.818Z",
+    "bytes": 395389280,
+    "sha256": "f880848ef4ba340b15cb91ff0754aa370d34ca7b7e605d6607c0f2a75009adc8",
+    "etag": "\"17912960-626cdc9223858\""
+  },
+  "excerpt": {
+    "file": "2018-ac.csv",
+    "sha256": "f6478089cedd657187ee9ce1ee7b4398253ec6b2d143434e1235adc6590dea85",
+    "rows": 299,
+    "transformation": "AC, turno 1; quoting uniforme; bytes Windows-1252/Latin-1 no recorte observado. Originais integrais em data/history."
+  }
+}

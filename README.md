@@ -1,8 +1,8 @@
 # Atlas da Apuração
 
-Primeiro fluxo local implementado: **fixture offline, SQLite WAL, mapa e timeline**. Não é uma entrega operacional de coleta oficial. A interface identifica permanentemente os números e horários sintéticos.
+Fluxo local implementado: **fixture offline, SQLite WAL, mapa, timeline e comparação por zonas completas**. Não é uma entrega operacional de coleta oficial. A interface identifica permanentemente os números e horários sintéticos.
 
-**Diretriz vigente:** [Aditivo 01](docs/ADITIVO_01_COMPARACAO_ZONAS_ATLAS.md), integrado à especificação 1.1, prioriza comparação por **zonas completas**, contagens de liderança e matrizes `2018→2026` / `2022→2026`. EA20 município–zona terá cobertura nacional progressiva; favoritos continuam limitando apenas o agregado municipal e priorizam a fila zonal. As funcionalidades zonais ainda estão pendentes; a tela/API informam esse estado. BU é extensão independente, sem bloquear o comparativo.
+**Diretriz vigente:** [Aditivo 01](docs/ADITIVO_01_COMPARACAO_ZONAS_ATLAS.md), integrado à especificação 1.1, prioriza comparação por **zonas completas**, contagens de liderança e matrizes `2018→2026` / `2022→2026`. O motor e a integração SQLite/API/UI funcionam com uma fixture de três zonas e seis segmentos. A fila nacional está implementada como componente testável, ainda sem transporte oficial habilitado. BU é extensão independente.
 
 ## Executar
 
@@ -28,9 +28,9 @@ Abra **http://127.0.0.1:3001**; Fastify serve também os assets compilados. O di
 
 1. Navegue de Brasil para uma UF pelo mapa ou seletor. Presidente e Governador possuem recortes separados; Governador exige UF.
 2. Pesquise **Acrelândia**, selecione e clique em **Salvar município**. Seleção e busca sozinhas não produzem snapshots municipais.
-3. Alterne Resultado/Cobertura/Comparação. A última informa honestamente que histórico e coorte ainda não estão disponíveis.
+3. Alterne Resultado/Cobertura/Comparação. A última mostra lideranças, seis participações ponderadas, duas matrizes 4×4, saldos, tabela e timeline com dados explicitamente sintéticos. Brasil/UF contam zonas; município conta unidades município–zona. A coorte fixture não substitui o resultado agregado.
 4. Arraste a timeline, clique nos pontos, use **Replay/Pausar/Agora**. São observações discretas, sem linhas interpoladas. A escala pode ser horário de captura ou progresso de seções; o indicador pode ser participação ou votos acumulados.
-5. Use **Próxima captura sintética** para inserir o próximo evento. A sequência começa com três de cinco capturas. Um município recém-salvo começa no evento atual, sem criar passado artificial.
+5. Use **Próxima captura sintética** para inserir o próximo evento. A sequência começa com três de cinco capturas. Na quarta, uma retificação retira uma zona da coorte (3→2); na quinta, retorna (2→3). Um município recém-salvo começa seu agregado no evento atual, sem criar passado artificial.
 6. Pare o monitoramento: o acervo continua consultável, mas os próximos eventos deixam de incluir o município.
 7. Abra **Origem, horários e denominadores** para inspecionar fonte, bruto, digest e horários separados.
 
@@ -60,12 +60,13 @@ Evidências e limites: [registro de validação](docs/VALIDACAO.md), [contratos 
 | EA11 oficial | HTTP 200, f=o, pleito 3220, ciclo ele2026, Presidente 6257/1, Governador 6259/3, turno 1. Diretórios obtidos de arq[].dir |
 | EA14 simulado | HTTP 200; 29 linhas, incluindo BR e ZZ; detector retorna pista baseada em dt/ht, s/e e andamento. Não produz resultado EA20 |
 | EA20 simulado | Presidente BR com vv=100.982.116 e vvc=120.704.576. A soma de candidaturas Válido coincide com vv; dvt Anulado/Sub judice preservados e excluídos da participação válida |
-| CSV históricos 2018/2022 | **A validar**: nenhum CSV importado nem comparação de colunas/encoding declarada concluída |
-| EA20 município–zona e cadastro completo de ZE | **A validar**: a observação anterior de EA20 municipal/UF não comprova o contrato zonal nem exceções de conclusão |
-| Coleta e conciliação nacional por zona no oficial | **Não validadas**; não há importação histórica, motor de coorte zonal ou coleta nacional em operação |
+| CSV históricos 2018/2022 | Windows-1252, nominal municipal/zonal presidencial do primeiro turno: 6.240 / 6.283 segmentos importados em SQLite separado; 13 / 11 candidatos. Recortes e hashes em `packages/fixtures/history` |
+| EA20 município–zona e cadastro | `tpabr=zona`, `cdabr=zona`; município ligado à URL descoberta no EA11. Três segmentos simulados da ZE0008/AC concluídos, 26.703 válidos somados. Cadastro oficial observado: 6.292 segmentos / 2.641 ZEs, incluindo 186 segmentos ZZ |
+| Oficial zonal amostrado | AC01120/0008: f=o, ts=45, st=0, snt=45; parcial. Não valida conclusão oficial. BA35572/0153 simulado tem seção não instalada e fica `needs_review` |
+| Coleta e conciliação nacional por zona no oficial | **Não validadas**. Nove ZEs do Acre têm mesma composição municipal nos três cadastros, mas seguem `review` até auditoria de reorganizações |
 | BU 2026 — extensão independente | **A validar**: EA16 e EA18 consultados; o auxiliar amostrado informa Totalizada, mas não contém hash nem arquivos. Não foi obtido/decodificado BU; isso não condiciona a comparação zonal |
 
-As capturas originais e manifests com URL, HTTP, bytes, captura e SHA-256 estão em `packages/fixtures/`. `official/` contém apenas configuração; `simulado/` contém dados reais do ambiente de testes do TSE; `synthetic/` define a demonstração fabricada. A aplicação não usa a sequência sintética como cronologia do simulado nem como votação oficial.
+As capturas originais e manifests com URL, HTTP, bytes, captura e SHA-256 estão em `packages/fixtures/`. `zonal/` contém observações simuladas e oficiais separadas no manifesto; `history/` contém recortes reais transformados e auditados. A aplicação usa somente a demonstração fabricada, nunca esses históricos como correspondências verificadas automaticamente.
 
 `pnpm observe:tse` e `node scripts/observe-extra.mjs` são scripts **opt-in de desenvolvimento**, com consultas sequenciais espaçadas, sem retries; substituem as fixtures de observação e exigem revisar os hashes/testes/documentação após uso. Nunca são executados pelo servidor ou pelo replay. Não existe polling de produção nesta versão.
 
@@ -78,12 +79,12 @@ As capturas originais e manifests com URL, HTTP, bytes, captura e SHA-256 estão
 - `packages/fixtures`: originais TSE, manifests e geometrias IBGE. Não formatar JSON bruto, pois os hashes são dos bytes capturados.
 - `docs`: especificação vigente 1.1, aditivo, contratos e registro incremental de evidências; originais anteriores preservados em `docs/history/pre-aditivo-01/`.
 
-Stack obrigatória preservada. Nesta primeira tela, CSS local e controles HTML nativos substituem a sugestão Tailwind/shadcn para reduzir dependências; nenhuma infraestrutura alternativa foi introduzida. `tsup` apenas empacota a API TypeScript para execução com Node. Os snapshots guardam payload tipado + metadados indexados; decomposição adicional em tabelas de candidatos fica para a coleta oficial.
+Stack obrigatória preservada, sem novas dependências. Snapshots agregados preservam seu formato. Migrations 002/003 acrescentam cadastro/segmentos, versões zonais, votos por candidato, matches e históricos normalizados com índices e imutabilidade. O banco histórico fica em `data/history/atlas-history.sqlite`, isolado da demonstração.
 
 ## Próximas etapas ainda pendentes
 
-Prioridade comparativa: validar EA20 município–zona/cadastro completo; ETL nominal municipal/zonal 2018/2022 e identidades oficiais; correspondências auditáveis; contagens de ZEs completas, líder real entre todos os candidatos e matrizes 4×4; coleta zonal nacional progressiva, persistência normalizada, shares e replay com reversão por retificação. Brasil/UF contam ZE inteira distinta; município conta segmento rotulado. [Contratos de aceite](docs/CONTRATOS_E_TESTES.md#c-comparação-por-zonas-completas--aceite-obrigatório) ainda não executados para essas funcionalidades.
+Prioridade: auditoria de reorganizações nos históricos, resolver exceções de conclusão, validar totalização oficial positiva, acoplar transporte/persistência à fila global e medir atraso nacional. O cadastro observado tem 6.292 segmentos: a 2 req/s, uma varredura isolada já exige ao menos 52min26s, antes dos agregados, latência e falhas. Isso é uma estimativa aritmética, não medição operacional.
 
-Também pendentes: coletor oficial com orçamento global/backoff/cache condicional/registro HTTP, SSE, expansão municipal, status/idade dos dados, backup/exportação. BU permanece experimental e fora do caminho crítico. Nenhum desses itens é apresentado como pronto.
+Também pendentes: SSE, malhas municipais fora do Acre, exportação analítica e operação oficial. `pnpm backup` cria cópia consistente SQLite via API nativa, incluindo WAL, em `data/backups`. Instruções de históricos e limites em [OPERACAO.md](docs/OPERACAO.md). BU permanece fora do caminho crítico.
 
 Fontes primárias: [documentação técnica TSE](https://www.tse.jus.br/eleicoes/informacoes-tecnicas-sobre-a-divulgacao-de-resultados), [EA11 oficial](https://resultados.tse.jus.br/oficial/comum/config/ele-c.json), [malhas IBGE](https://servicodados.ibge.gov.br/api/docs/malhas?versao=3). Especificação funcional: [docs/ESPECIFICACAO.md](docs/ESPECIFICACAO.md).

@@ -102,6 +102,7 @@ export function resolveTsePath(
   const m = c.municipality ? pad(c.municipality, 5) : undefined;
   const z = c.zone ? pad(c.zone, 4) : undefined,
     s = c.section ? pad(c.section, 4) : undefined;
+  if (kind === 'EA20' && z && (!m || uf === 'br')) throw Error('Zona exige município e UF');
   const values: Record<string, string | undefined> = {
     base:
       c.environment === 'official'
@@ -125,7 +126,7 @@ export function resolveTsePath(
     EA12: `mun-e${e}-cm.json`,
     EA14: `br-e${e}-ab.json`,
     EA15: `${uf}-e${e}-ab.json`,
-    EA20: `${uf}${m ?? ''}-c${cargo}-e${e}-u.json`,
+    EA20: `${uf}${m ?? ''}${z ? `-z${z}` : ''}-c${cargo}-e${e}-u.json`,
     EA16: `${uf}-p${p}-cs.json`,
     EA18: `p${p}-${uf}-m${m}-z${z}-s${s}-aux.json`,
   }[kind];
@@ -157,19 +158,23 @@ export function normalizeEA20(
     capturedAt: string;
     basis?: 'ea20' | 'synthetic';
     raw?: string;
+    zone?: string;
   },
 ): Snapshot {
   const j = ea20Schema.parse(input);
   validatePhase(j.f, context.environment);
   validateOrigin(context.sourceUrl, context.environment);
   const { territory, office } = context;
-  const kind =
-    territory.kind === 'municipality'
+  const kind = context.zone
+    ? 'zona'
+    : territory.kind === 'municipality'
       ? 'mu'
       : territory.kind === 'exterior'
         ? 'uf'
         : territory.kind;
-  const code = territory.tseCode ?? territory.uf ?? 'br';
+  const code = context.zone ?? territory.tseCode ?? territory.uf ?? 'br';
+  if (context.zone && (!/^\d{4}$/.test(context.zone) || !territory.tseCode))
+    throw Error('Identificação zonal inválida');
   if (j.ele !== context.electionId || j.t !== '1' || j.tpabr !== kind || j.cdabr !== code)
     throw Error('Eleição/turno/abrangência incompatível');
   if (office === 'governor' && ['br', 'exterior'].includes(territory.kind))
@@ -218,7 +223,13 @@ export function normalizeEA20(
     c.validShare = publish && consistent ? ratio(c.countedVotes, n(j.v.vv)) : null;
   const contentDigest = digest(input);
   return {
-    id: digest([context.environment, context.electionId, office, territory.id, contentDigest]),
+    id: digest([
+      context.environment,
+      context.electionId,
+      office,
+      context.zone ? `${territory.id}:${context.zone}` : territory.id,
+      contentDigest,
+    ]),
     environment: context.environment,
     electionId: context.electionId,
     office,

@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import type { Bootstrap, Layer, Office, Snapshot } from '../../../packages/domain/src/index';
 import AtlasMap from './map/AtlasMap';
 import TimelineChart from './charts/TimelineChart';
+import ZoneComparison from './charts/ZoneComparison';
 import { api, candidateColor, dateTime, integer, percent, time } from './format';
 
 type View = { snapshot: Snapshot | null; monitoring: boolean; status: string };
@@ -471,11 +472,11 @@ export default function App() {
               {layer === 'comparison' ? (
                 <div className="comparison-empty">
                   <div className="empty-symbol">↔</div>
-                  <h2>Comparação indisponível</h2>
+                  <h2>Comparação territorial</h2>
                   <p>
                     {office === 'governor'
                       ? 'O comparativo histórico é exclusivo para Presidente nesta versão.'
-                      : 'O histórico de 2018 e 2022 e as identidades oficiais de 2026 ainda não foram validados.'}
+                      : 'Demonstração sintética disponível abaixo. Históricos reais e conciliação nacional continuam pendentes.'}
                   </p>
                   <div className="comparison-method">
                     <b>Referência territorial</b>
@@ -488,8 +489,8 @@ export default function App() {
                         ? 'Unidades município–zona concluídas e conciliadas'
                         : 'Zonas concluídas e conciliadas'}
                     </b>
-                    <span>EA20 zonal e correspondência histórica pendentes</span>
-                    <small>Desativada · coleta zonal nacional não validada</small>
+                    <span>Mesma coorte nos três anos · líderes entre todos os candidatos</span>
+                    <small>Fixture ativa · coleta zonal nacional não validada</small>
                   </div>
                 </div>
               ) : !snapshot ? (
@@ -646,7 +647,14 @@ export default function App() {
                 </select>
               </div>
             </div>
-            {layer !== 'comparison' && snapshots.length > 0 ? (
+            {layer === 'comparison' && office === 'president' ? (
+              <ZoneComparison
+                territory={territoryId}
+                at={at}
+                revision={revision}
+                onSelect={selectTime}
+              />
+            ) : layer !== 'comparison' && snapshots.length > 0 ? (
               <TimelineChart
                 snapshots={snapshots}
                 layer={layer}

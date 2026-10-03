@@ -850,6 +850,14 @@ O replay lê snapshots locais e reproduz os eventos na ordem **de captura**, exi
 
 ## 18. Histórico de revisões
 
+### Nota técnica comprovada em 02/10/2026, execução das 21h
+
+Sem alterar a revisão funcional 1.1: a amostra EA20 zonal confirma `tpabr="zona"`, `cdabr` com quatro dígitos e nome `<uf><municipio>-z<zona>-c<cargo>-e<eleicao>-u.json`, resolvido a partir do EA11. O corpo não identifica o município separadamente; o adapter exige a URL exata da requisição e pertencimento ao cadastro EA12. A grafia observada da destinação é `Anulado sub judice`. No oficial sem totalização, `dvt` está ausente e não pode ser presumido válido.
+
+A ZE0008/AC tem três segmentos esperados: 01120, 01511 e 01538. No simulado, os três satisfazem os contadores conservadores; no oficial, a amostra AC01120 tem st=0. BA35572/0153 simulado tem ts=st=28, snt=0 e sni=1: permanece em revisão, sem generalizar uma regra para exceções.
+
+Históricos nominais BR de 2018/2022 foram lidos em Windows-1252, com primeiro turno/cargo 1/eleição ordinária, votação válida nominal e partições de trânsito explícitas. Importação normalizada e prova estrutural do Acre não equivalem à conciliação nacional. A comparação habilitada na API/UI é exclusivamente fixture, com `officialStatus=pending_validation`. Detalhes e hashes em `VALIDACAO.md` e `packages/fixtures`.
+
 | Revisão | Alteração | Evidência de implementação |
 |---|---|---|
 | 1.0 — 02/10/2026 | Especificação inicial, comparação por coorte de BU em municípios salvos | [Cópia integral preservada](history/pre-aditivo-01/ESPECIFICACAO.md); provas do primeiro fluxo em `VALIDACAO.md` |
