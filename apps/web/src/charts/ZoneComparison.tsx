@@ -22,11 +22,13 @@ export default function ZoneComparison({
   at,
   revision,
   onSelect,
+  endpoint = '/api/v1/comparison',
 }: {
   territory: string;
   at: string | null;
   revision: number;
   onSelect: (at: string) => void;
+  endpoint?: string;
 }) {
   const [data, setData] = useState<Response | null>(null),
     [error, setError] = useState('');
@@ -40,7 +42,7 @@ export default function ZoneComparison({
     setError('');
     const q = new URLSearchParams({ territory });
     if (at) q.set('at', at);
-    api<Response>(`/api/v1/comparison?${q}`)
+    api<Response>(`${endpoint}?${q}`)
       .then((r) => {
         if (active) setData(r);
       })
@@ -50,7 +52,7 @@ export default function ZoneComparison({
     return () => {
       active = false;
     };
-  }, [territory, at, revision]);
+  }, [territory, at, revision, endpoint]);
   useEffect(() => {
     if (!chart.current || !data?.timeline.length) return;
     const instance = echarts.init(chart.current);
@@ -82,7 +84,7 @@ export default function ZoneComparison({
     };
   }, [data, onSelect]);
   if (error) return <p role="alert">{error}</p>;
-  if (!data) return <p className="chart-empty">Carregando comparação sintética…</p>;
+  if (!data) return <p className="chart-empty">Carregando comparação…</p>;
   const c = data.comparison;
   if (!c) return <p className="chart-empty">Sem cadastro capturado neste instante. —</p>;
   const unit = c.unitKind === 'whole_zone' ? 'zonas eleitorais' : 'unidades município–zona';
@@ -94,7 +96,11 @@ export default function ZoneComparison({
     <div className="zone-comparison">
       <div className="zone-title">
         <div>
-          <span className="eyebrow">FIXTURE · DADOS SINTÉTICOS</span>
+          <span className="eyebrow">
+            {c.environment === 'fixture'
+              ? 'FIXTURE · DADOS SINTÉTICOS'
+              : 'FONTE TSE · COORTE HISTÓRICA'}
+          </span>
           <h2>Comparação por {unit}</h2>
         </div>
         <span className="zone-cohort" data-testid="zone-cohort">
@@ -282,7 +288,7 @@ export default function ZoneComparison({
           </tbody>
         </table>
       </div>
-      {!rows.length && <p>Nenhuma unidade neste recorte da fixture.</p>}
+      {!rows.length && <p>Nenhuma unidade neste recorte.</p>}
     </div>
   );
 }

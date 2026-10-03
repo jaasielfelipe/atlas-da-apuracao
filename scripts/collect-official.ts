@@ -1,2 +1,2 @@
 import { runCollection } from './collect-national';
-await runCollection('simulated');
+await runCollection('official');

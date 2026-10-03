@@ -9,7 +9,7 @@ import {
 import { validateOrigin } from '../../../../packages/tse/src/index';
 
 export class ZoneStore {
-  constructor(readonly store: Store) {}
+  constructor(readonly store: Pick<Store, 'db'>) {}
   insertFixture(dataset: ZoneDataset) {
     // Official ingestion requires a separate audited import path; fixtures cannot enable it.
     if (dataset.environment !== 'fixture') throw Error('Ingestão disponível apenas para fixture');

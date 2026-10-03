@@ -184,6 +184,7 @@ export default function App() {
         </span>
         <div className="header-status">
           <a href="/simulated">Acervo simulado</a>
+          <a href="/official">Acervo oficial</a>
           <span className="badge">FIXTURE</span>
           <span className="local-status">
             <i /> Acervo local

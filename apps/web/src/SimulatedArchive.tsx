@@ -1,8 +1,9 @@
 import { useEffect, useState, useRef } from 'react';
 import type { Snapshot, Territory } from '../../../packages/domain/src/index';
 import { api, dateTime, integer, percent } from './format';
+import ZoneComparison from './charts/ZoneComparison';
 type Archive = {
-  environment: 'simulated';
+  environment: 'simulated' | 'official';
   lastObservation: string | null;
   coverage: {
     expectedSegments: number;
@@ -13,7 +14,13 @@ type Archive = {
   } | null;
   territories: Territory[];
 };
-export default function SimulatedArchive() {
+export default function SimulatedArchive({
+  environment = 'simulated',
+}: {
+  environment?: 'official' | 'simulated';
+}) {
+  const official = environment === 'official';
+  const [comparisonAt, setComparisonAt] = useState<string | null>(null);
   const loadedScope = useRef('');
   const [archive, setArchive] = useState<Archive | null>(null),
     [error, setError] = useState('');
@@ -26,7 +33,7 @@ export default function SimulatedArchive() {
   useEffect(() => {
     let active = true;
     setError('');
-    api<Archive>('/api/v1/simulated/archive')
+    api<Archive>(`/api/v1/${environment}/archive`)
       .then((a) => {
         if (active) setArchive(a);
       })
@@ -36,17 +43,17 @@ export default function SimulatedArchive() {
     return () => {
       active = false;
     };
-  }, [revision]);
+  }, [revision, environment]);
   useEffect(() => {
     let active = true;
     setLoading(true);
-    const scope = `${office}:${territory}`;
+    const scope = `${environment}:${office}:${territory}`;
     if (loadedScope.current !== scope) {
       setSnapshots([]);
       loadedScope.current = scope;
     }
     api<{ snapshots: Snapshot[] }>(
-      `/api/v1/simulated/results?office=${office}&territory=${territory}`,
+      `/api/v1/${environment}/results?office=${office}&territory=${territory}`,
     )
       .then((r) => {
         if (active) {
@@ -63,19 +70,28 @@ export default function SimulatedArchive() {
     return () => {
       active = false;
     };
-  }, [office, territory, revision]);
+  }, [office, territory, revision, environment]);
   const snapshot = snapshots[index],
     coverage = archive?.coverage;
   return (
     <main className="sim-archive">
       <header>
         <a href="/">← Painel fixture</a>
-        <span className="badge">SIMULADO TSE</span>
+        <span className="badge">{official ? 'OFICIAL TSE' : 'SIMULADO TSE'}</span>
       </header>
-      <h1>Acervo simulado</h1>
+      <h1>{official ? 'Acervo oficial' : 'Acervo simulado'}</h1>
       <p className="fixture-notice">
-        <strong>Não são resultados oficiais.</strong> Capturas do ambiente de testes do TSE, em
-        banco separado.
+        {official ? (
+          <>
+            <strong>Capturas do ambiente oficial do TSE.</strong> Dados ausentes não significam
+            zero. Comparação histórica tem cobertura própria.
+          </>
+        ) : (
+          <>
+            <strong>Não são resultados oficiais.</strong> Capturas do ambiente de testes do TSE, em
+            banco separado.
+          </>
+        )}
       </p>
       <p>
         Consulta local. Abrir esta página não inicia coleta.{' '}
@@ -102,13 +118,22 @@ export default function SimulatedArchive() {
             </dd>
           </div>
         </dl>
-        <p>
-          Comparação histórica: <strong>indisponível para os candidatos do simulado</strong>. O
-          aceite territorial do ambiente oficial não vincula candidaturas simuladas às séries
-          históricas. Não há estimativa para zonas parciais.
-        </p>
+        {official ? (
+          <p>
+            Agregados Brasil/UF independem da coorte histórica. Aceite territorial informado pelo
+            usuário; somente zonas completas entram na comparação.
+          </p>
+        ) : (
+          <p>
+            Comparação histórica: <strong>indisponível para os candidatos do simulado</strong>. O
+            aceite territorial do ambiente oficial não vincula candidaturas simuladas às séries
+            históricas. Não há estimativa para zonas parciais.
+          </p>
+        )}
       </section>
-      <section aria-label="Resultado agregado do simulado">
+      <section
+        aria-label={official ? 'Resultado agregado oficial' : 'Resultado agregado do simulado'}
+      >
         <h2>Resultado agregado EA20</h2>
         <div className="archive-controls">
           <label>
@@ -192,12 +217,28 @@ export default function SimulatedArchive() {
             <p>
               {snapshots.length} captura(s). Apenas versões observadas, sem interpolação.{' '}
               <a href={snapshot.sourceUrl} target="_blank" rel="noreferrer">
-                Fonte no simulado TSE
+                {official ? 'Fonte oficial TSE' : 'Fonte no simulado TSE'}
               </a>
             </p>
           </>
         )}
       </section>
+      {official && office === 'president' && (
+        <section aria-label="Comparação histórica oficial">
+          <p>
+            Instante da comparação: {comparisonAt ? dateTime(comparisonAt) : 'último estado local'}.
+            Independente da captura do agregado.
+          </p>
+          <button onClick={() => setComparisonAt(null)}>Comparação atual</button>
+          <ZoneComparison
+            territory={territory}
+            at={comparisonAt}
+            revision={revision}
+            onSelect={setComparisonAt}
+            endpoint="/api/v1/official/comparison"
+          />
+        </section>
+      )}
     </main>
   );
 }

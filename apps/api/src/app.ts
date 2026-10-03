@@ -9,6 +9,7 @@ import { FixtureService } from './services/fixtures';
 import { ZoneStore } from './db/zones';
 import { compareZones } from '../../../packages/domain/src/zones';
 import { registerSimulatedArchive } from './services/simulated-archive';
+import { registerOfficialComparison } from './services/official-comparison';
 
 const atSchema = z.string().datetime({ precision: 3 }).optional();
 const querySchema = z.object({
@@ -20,6 +21,8 @@ export async function createApp(
   options: {
     dbPath?: string;
     simulatedDbPath?: string;
+    officialDbPath?: string;
+    historyDbPath?: string;
     environment?: string;
     root?: string;
     logger?: boolean;
@@ -49,6 +52,14 @@ export async function createApp(
   registerSimulatedArchive(
     app,
     options.simulatedDbPath ?? resolve(root, 'data/simulated/collection.sqlite'),
+  );
+  const officialPath = options.officialDbPath ?? resolve(root, 'data/official/collection.sqlite');
+  registerSimulatedArchive(app, officialPath, 'official');
+  registerOfficialComparison(
+    app,
+    officialPath,
+    options.historyDbPath ?? resolve(root, 'data/history/atlas-history.sqlite'),
+    root,
   );
   function findTerritory(id: string) {
     return fixtures.territories.find((t) => t.id === id);
@@ -245,6 +256,7 @@ export async function createApp(
   if (existsSync(web)) {
     await app.register(fastifyStatic, { root: web, prefix: '/' });
     app.get('/simulated', async (_request, reply) => reply.sendFile('index.html'));
+    app.get('/official', async (_request, reply) => reply.sendFile('index.html'));
   }
   return { app, store, fixtures };
 }

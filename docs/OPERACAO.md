@@ -69,3 +69,9 @@ Auditoria aceita operacionalmente pelo usuário para 2.580 ZEs/5.940 segmentos d
 `pnpm accept:territorial-audit` reproduz a decisão já registrada, sem rede: verifica hashes locais/candidatos, faz backup SQLite e anexa os históricos finais ao motor. A evidência versionada fixa o instante original do aceite. Não usar o comando como aceitação automática de novos cadastros. O banco continua em `data/history/atlas-history.sqlite`; imports mantêm seu status original de ingestão imutável, e o estado efetivo está nos registros de auditoria.
 
 Próximas etapas: integrar o adaptador ao acervo/API oficial separado; habilitar coleta oficial controlada com a mesma cota global 2 req/s e 2 em voo; verificar publicação/completude e ensaiar frescor nacional. A amostra oficial existente é parcial, portanto coorte observada continua vazia. Agregados permanecem independentes. O painel simulado continua consulta de acervo e não permite comparar candidatos simulados às séries políticas oficiais.
+
+## Acervo oficial separado — 03/10/2026
+
+- `pnpm collect:official`: mesmo ensaio limitado do simulado (`COLLECT_SECONDS` 10–180), em `data/official/collection.sqlite`. Primeira execução real às 21:31Z: 112 requisições 200, 0 erros, 56 snapshots agregados e 25 segmentos do Acre, todos parciais (0 ZEs completas). Evidência: `docs/evidence/national/ingestion-official.json`.
+- `http://127.0.0.1:3001/official`: consulta somente leitura do acervo oficial (selo OFICIAL TSE). Rotas `/api/v1/official/archive`, `/api/v1/official/results` e `/api/v1/official/comparison?territory=br|uf|uf:municipio&at=...`. A comparação usa o banco oficial + `data/history/atlas-history.sqlite`, identidades exatas de `packages/fixtures/history/series-identities.json` conferidas por hash e o aceite `user_accepted_structural`. Banco ausente responde 503; agregados BR/UF continuam disponíveis se a comparação falhar.
+- O painel `/` continua fixture.
