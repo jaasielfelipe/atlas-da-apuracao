@@ -8,6 +8,7 @@ import { Store } from './db/store';
 import { FixtureService } from './services/fixtures';
 import { ZoneStore } from './db/zones';
 import { compareZones } from '../../../packages/domain/src/zones';
+import { registerSimulatedArchive } from './services/simulated-archive';
 
 const atSchema = z.string().datetime({ precision: 3 }).optional();
 const querySchema = z.object({
@@ -16,7 +17,13 @@ const querySchema = z.object({
   at: atSchema,
 });
 export async function createApp(
-  options: { dbPath?: string; environment?: string; root?: string; logger?: boolean } = {},
+  options: {
+    dbPath?: string;
+    simulatedDbPath?: string;
+    environment?: string;
+    root?: string;
+    logger?: boolean;
+  } = {},
 ) {
   const root = options.root ?? process.cwd();
   const environment = options.environment ?? process.env.TSE_ENV ?? 'fixture';
@@ -39,6 +46,10 @@ export async function createApp(
     request.log.error(error);
     return reply.code(500).send({ error: 'Falha local; dados anteriores preservados' });
   });
+  registerSimulatedArchive(
+    app,
+    options.simulatedDbPath ?? resolve(root, 'data/simulated/collection.sqlite'),
+  );
   function findTerritory(id: string) {
     return fixtures.territories.find((t) => t.id === id);
   }
@@ -231,6 +242,9 @@ export async function createApp(
     decorateReply: false,
   });
   const web = resolve(root, 'dist/web');
-  if (existsSync(web)) await app.register(fastifyStatic, { root: web, prefix: '/' });
+  if (existsSync(web)) {
+    await app.register(fastifyStatic, { root: web, prefix: '/' });
+    app.get('/simulated', async (_request, reply) => reply.sendFile('index.html'));
+  }
   return { app, store, fixtures };
 }

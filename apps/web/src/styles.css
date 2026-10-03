@@ -1337,3 +1337,77 @@ select {
     font-size: 11px;
   }
 }
+
+.sim-archive {
+  max-width: 1100px;
+  margin: 0 auto;
+  padding: 28px;
+}
+.sim-archive header,
+.archive-controls {
+  display: flex;
+  gap: 24px;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+}
+.sim-archive h1 {
+  margin: 28px 0 16px;
+}
+.sim-archive section {
+  background: #fff;
+  border: 1px solid #dce3d7;
+  border-radius: 8px;
+  padding: 24px;
+  margin: 24px 0;
+}
+.sim-archive p {
+  line-height: 1.7;
+}
+.sim-archive dl {
+  display: flex;
+  gap: 32px;
+  flex-wrap: wrap;
+}
+.sim-archive dd {
+  margin: 8px 0;
+  font-size: 24px;
+}
+.sim-archive label {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.sim-archive select {
+  min-width: 180px;
+}
+.archive-controls {
+  justify-content: flex-start;
+  margin-bottom: 20px;
+}
+.archive-table {
+  overflow-x: auto;
+  margin: 20px 0;
+}
+.archive-table table {
+  width: 100%;
+  min-width: 580px;
+  border-collapse: collapse;
+}
+.archive-table th,
+.archive-table td {
+  padding: 12px;
+  border-bottom: 1px solid #dce3d7;
+  text-align: left;
+}
+.sim-archive input[type='range'] {
+  width: 100%;
+}
+@media (max-width: 600px) {
+  .sim-archive {
+    padding: 16px;
+  }
+  .sim-archive section {
+    padding: 16px;
+  }
+}

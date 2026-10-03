@@ -54,3 +54,7 @@ Confira `docs/CONTRATOS_E_TESTES.md` para cenários de verificação e checklist
 ### Atualização de desempenho — 03/10/2026
 
 Coletor incremental/concorrente e migration 005 implementados; medições locais e amostras HTTP do simulado em `docs/OTIMIZACAO_COLETA_NACIONAL.md`. Lease é por banco; todos os feeds devem compartilhar o mesmo serviço. Painel continua fixture; não habilitar oficial com base no benchmark. Inventário nacional real encontrou 2.580 ZEs de composição igual, ainda review e sem promoção a verified. Auditoria territorial e integração nacional normalizada continuam pendentes.
+
+### Integração de ingestão e consulta do simulado — 03/10/2026
+
+`NationalCollection` prepara o universo nacional e integra EA14/EA15, agregados e ingestão zonal normalizada. `collect:simulated` executa ensaio limitado em banco separado. Três janelas somaram 342 HTTP sem erros, 56 agregados e 22 segmentos do Acre (8 ZEs completas); não é validação zonal nacional. `/simulated` é consulta somente leitura desse acervo, sem coleta automática. Painel principal continua fixture; comparação real/ativação oficial e auditoria territorial continuam pendentes.

@@ -213,3 +213,11 @@ Pendentes para aceite integral: conclusão positiva no oficial, demais exceçõe
 - Replay de corpos usa somente observações aceitas até o instante; observações são imutáveis. Match estrutural nacional nunca é promovido a verified sem auditoria.
 
 Evidências e parâmetros: `OTIMIZACAO_COLETA_NACIONAL.md`.
+
+## Contratos da ingestão integrada e consulta do simulado
+
+- Plano inclui todos os segmentos EA12 nacional, independente de favoritos; somente municípios salvos recebem EA20 agregado municipal.
+- Aceitação transaciona normalização, bruto/cache/observação; repetição não duplica resultado e A→B→A preserva a terceira captura.
+- EA15 dispara pistas por segmento; hashes persistem. Primeira pista não reconsulta agregado já capturado, mas mudança posterior o antecipa. Bootstrap dirigido mantém a cota sem suspender a fila nacional.
+- Cobertura de ZE requer todos os segmentos normalizados completos; 22 segmentos capturados no ensaio não viram 22 ZEs nem correspondências históricas verificadas.
+- `/api/v1/simulated/*` lê banco separado, não cria dados, respeita corte temporal e nunca substitui `/api/v1/latest` fixture. `/simulated` não inicia coleta e mantém última captura visível se atualização falhar.

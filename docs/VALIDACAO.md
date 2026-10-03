@@ -183,3 +183,37 @@ Recomendação inicial: 2 req/s, 2 em voo, sem elevar para 20. Cadências e limi
 Fechamento da verificação: E2E repetido com sucesso (**1 fluxo, 22,4s**). Capturas desktop/mobile da comparação inspecionadas: rótulo fixture, tabelas/matrizes e timeline preservados, rolagem interna móvel sem overflow da página. Assets frontend mantiveram os hashes do build anterior. A migração e o loop não alteraram o layout.
 
 Servidor compilado restabelecido em `127.0.0.1:3001` após backup SQLite consistente; ambiente fixture preservado e migração 005 aplicada. Formatação e `git diff --check` passaram. Após a regra conservadora final de conclusão, os 43 testes de contratos/domínio foram repetidos e passaram.
+
+## Ingestão nacional integrada e acervo simulado — 03/10/2026
+
+`NationalCollection` agora integra cadastro EA12 nacional completo, planejamento de EA20 zonal/BR/UF (Presidente e Governador), EA14/EA15, transporte validado e SQLite normalizado. O bootstrap deriva URLs do EA11 e compartilha a mesma cota dos demais feeds. Banco é vinculado ao ambiente, eleições e versão cadastral; mistura de ambientes ou alteração cadastral não revisada falha fechado. Favoritos são carregados ao construir o plano; seus agregados municipais são os únicos cadastrados. Todos os segmentos zonais continuam na fila.
+
+Aceitação de HTTP200 executa ingestão normalizada dentro da transação de corpo/cache/observação. Zona é gravada em `zone_result`/`zone_candidate_vote`, sem fingir agregado municipal. Repetição do mesmo corpo não duplica versão; retorno A→B→A preserva a nova captura. Falha na ingestão reverte a aceitação do cache. EA15 gera pistas por município e reconsulta os segmentos, inclusive concluídos. Hashes das pistas sobrevivem ao reinício; destinos são indexados em memória para evitar percorrer a fila toda a cada município. Primeira leitura do índice não dispara novamente agregados já capturados; alterações posteriores continuam antecipando rechecagens, com fallback preservado.
+
+### Ensaios reais, exclusivamente no simulado
+
+Comando novo: `pnpm collect:simulated`, banco separado `data/simulated/collection.sqlite`, 2 req/s, 2 em voo, janela padrão de 60s (COLLECT_SECONDS aceita 10–180), parada por erro HTTP/contrato/aceitação. O comando termina; não foi deixado polling ativo nem criado agendamento. Lock compartilhado com os benchmarks impede execução simultânea desses comandos locais.
+
+| Janela | HTTP adicionais | HTTP cumulativos | 200 / 304 cumulativos | Agregados normalizados | Segmentos zonais observados | ZEs inteiras concluídas |
+|---|---:|---:|---:|---:|---:|---:|
+| Inicial, 60s | 117 | 117 | 61 / 56 | 56 | 0 | 0 |
+| Retomada, 60s | 116 | 233 | 81 / 152 | 56 | 0 | 0 |
+| Após eliminar pistas iniciais redundantes, 60s | 109 | 342 | 109 / 233 | 56 | 22 | 8 |
+
+Nenhum erro HTTP/contrato observado. As janelas foram separadas por trabalho de implementação; **não constituem 180s contínuos nem comparação causal controlada de desempenho**. A terceira janela usa o mesmo banco aquecido e incorpora a correção de pistas. As duas primeiras evidenciam atraso real de bootstrap, que não foi omitido. A fila contém 6.289 segmentos/2.639 ZEs do simulado, 56 agregados, 29 acompanhamentos e 2 jobs de bootstrap: 6.376 jobs. Os 22 segmentos efetivamente capturados são **do Acre**; isto não valida resultados zonais de todas as UFs. Os 56 agregados incluem Brasil/UF/ZZ presidencial e governador nas 27 UFs.
+
+Cobertura atual: 22 segmentos concluídos formam somente 8 ZEs inteiras. Não se presume conclusão de uma ZE com segmento ainda ausente. Não há qualquer match histórico habilitado. `integrity_check=ok` no SQLite simulado após os ensaios. Evidências: `docs/evidence/national/ingestion-simulated-first.json`, `ingestion-simulated-second.json` e `ingestion-simulated.json`; o último contém URLs, SHA-256, captura e contagens dos resultados zonais normalizados. Brutos e votos completos ficam no banco local separado.
+
+### Consulta local sem coleta automática
+
+Página `/simulated`, acessível pelo link **Acervo simulado** no cabeçalho. Mostra aviso permanente de simulado, cobertura atual do coletor, resultados agregados, seções, votos/destinações e seleção entre capturas existentes. Comparação histórica permanece explicitamente pendente. Cobertura atual e replay do agregado são rotulados separadamente. Atualização manual preserva a última captura na tela se falhar. Abrir a página não chama o TSE nem inicia o coletor.
+
+Rotas `/api/v1/simulated/archive` e `/api/v1/simulated/results` abrem o banco simulado **somente para leitura**, sem migração ou criação automática. Ausência retorna 503; mistura de ambientes falha. Corte temporal é normalizado para UTC com milissegundos. As rotas originais, `/health`, mapa, snapshots e comparação fixture continuam isoladas. O novo acervo não habilita modo oficial.
+
+### Verificações e limites
+
+63 testes unitários/integração passaram, cobrindo plano nacional, favoritos, pistas persistidas, retificação, rollback, corte temporal, API de leitura e ausência de contaminação da fixture. Build/typecheck passaram. Dois fluxos E2E passaram na primeira revisão; capturas desktop/mobile de `/simulated` inspecionadas e sem overflow da página. E2E do acervo usa respostas controladas com corpo EA20 capturado; suas imagens não são evidência de nova consulta de rede. Capturas: `simulated-archive-desktop.png` e `simulated-archive-mobile.png`.
+
+Persistem: auditoria nacional de reorganizações e correspondências históricas; ativação oficial; encaixe do acervo real no fluxo cartográfico completo; favoritos do simulado em tempo de execução (o plano os lê na construção); mudança/renovação cadastral durante um processo longo; soak test e frescor nacional. O frontend oferece consulta, não controle de coleta contínua. **Coleta e conciliação nacional oficial continuam não validadas.**
+
+Fechamento: 63 testes, typecheck/build, formatação e `git diff --check` passaram. E2E final: **2 fluxos, 21,1s**, incluindo permanência dos números aceitos durante erro de atualização. Revisão visual desktop/mobile do acervo e mobile do painel fixture concluída. Servidor compilado reiniciado em 127.0.0.1:3001; `/simulated` respondeu 200, API retornou ambiente simulated e cobertura 22 segmentos/8 ZEs, e o agregado BR capturado foi lido do banco separado. Nenhum coletor ficou em execução após os ensaios.

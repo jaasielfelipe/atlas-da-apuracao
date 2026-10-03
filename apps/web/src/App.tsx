@@ -183,6 +183,7 @@ export default function App() {
           ELEIÇÕES GERAIS <strong>2026</strong>
         </span>
         <div className="header-status">
+          <a href="/simulated">Acervo simulado</a>
           <span className="badge">FIXTURE</span>
           <span className="local-status">
             <i /> Acervo local

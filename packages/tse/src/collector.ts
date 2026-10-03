@@ -79,6 +79,12 @@ export class ConservativeCollector {
   get inFlight() {
     return this.active.size;
   }
+  suspend(key: string, value = true) {
+    const job = this.jobs.get(key);
+    if (!job) return;
+    job.suspended = value || this.missing.has(key);
+    this.dirty.add(key);
+  }
   /** Coalesce hints. A hint during HTTP schedules one additional check, never overlaps itself. */
   hint(key: string, now: number) {
     const job = this.jobs.get(key);
@@ -133,6 +139,7 @@ export class ConservativeCollector {
       job: Readonly<CollectJob>,
       headers: Record<string, string>,
     ) => Promise<CollectResponse>,
+    eligible: (job: Readonly<CollectJob>) => boolean = () => true,
   ) {
     if (this.active.size >= this.maxInFlight || now < this.nextRequest) return null;
     // Every fourth slot serves oldest-due territory regardless of favorites: no starvation.
@@ -147,6 +154,7 @@ export class ConservativeCollector {
     let protectedFeed = false;
     let granularActive = 0;
     for (const j of this.jobs.values()) {
+      if (!eligible(j)) continue;
       if (j.kind === 'aggregate' && !j.municipality && !j.suspended) protectedFeed = true;
       if (this.active.has(j.key)) {
         if (j.kind !== 'aggregate' || j.municipality) granularActive++;

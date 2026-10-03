@@ -1,0 +1,32 @@
+{
+  "capturedAt": "2026-10-03T20:13:07.763Z",
+  "secondsRequested": 60,
+  "environment": "simulated",
+  "expectedSegments": 6289,
+  "expectedZones": 2639,
+  "jobs": 6376,
+  "stats": {
+    "requests": 117,
+    "bytes": 1183197,
+    "unchanged": 56,
+    "errors": 0
+  },
+  "historicalComparison": "pending_validation",
+  "registryDigest": "f2df11f98a7bde1f964d2829b20e4b4defb724a8d0002ee169edf927660ccdb4",
+  "observedSegments": 0,
+  "completeSegments": 0,
+  "completeZones": 0,
+  "aggregateSnapshots": {
+    "n": 56
+  },
+  "observations": [
+    {
+      "status": 200,
+      "n": 61
+    },
+    {
+      "status": 304,
+      "n": 56
+    }
+  ]
+}

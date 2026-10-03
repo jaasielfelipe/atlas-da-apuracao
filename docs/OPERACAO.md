@@ -52,3 +52,12 @@ Não há coleta nem conciliação nacional oficial validada nesta entrega.
 Consulte `OTIMIZACAO_COLETA_NACIONAL.md` para parâmetros medidos, cadências e limites. `PersistentCollector.run(transport, signal)` é o único loop de operação de todos os feeds em um banco; lease não coordena outros bancos/IP. Transporte deve retornar conclusão exclusivamente do adapter validado. Passe intervalMs/maxInFlight/pollMs/auditMs explicitamente para cenário nacional; padrões antigos de polling não constituem SLA.
 
 `pnpm benchmark:concurrent` mede amostra do simulado sob o mesmo gate, interrompe em erro e nunca habilita modo oficial do painel. `pnpm reconcile:national` produz inventário nacional sem alterar imports/matches. A implantação funcional da coleta nacional real ainda exige conectar cadastro, pistas EA15, ingestão normalizada e observabilidade; não confundir cache coletado com coorte pronta. Resultados agregados continuam separados e não dependem da comparação histórica.
+
+## Consultar e ensaiar o acervo simulado
+
+- `pnpm collect:simulated`: ensaio opt-in limitado, por padrão 60 segundos a 2 req/s e duas requisições em voo. `COLLECT_SECONDS` permite 10–180. Consulta EA11/EA12, retoma o banco `data/simulated/collection.sqlite`, coleta sob o mesmo gate e termina. Não executar outro coletor/benchmark no mesmo IP. Não há agendamento nem coleta iniciada ao abrir o navegador.
+- `http://127.0.0.1:3001/simulated`: consulta do acervo já capturado. **Atualizar acervo** relê SQLite; não faz download do TSE. BR/UF agregados independem de conciliação histórica. O banner SIMULADO TSE é permanente; o painel `/` continua fixture.
+- API somente leitura: `/api/v1/simulated/archive` (cobertura atual) e `/api/v1/simulated/results?office=president&territory=br&at=...` (capturas do agregado até o corte opcional). Governador exige UF doméstica. Banco inexistente é indisponível, nunca resultado zero.
+- Fila nacional está integrada ao adapter normalizado, mas o ensaio real avançou somente 22 segmentos do Acre. Os históricos continuam fora da coorte real. Renovação cadastral e mudanças de favoritos exigem reconstruir o plano; não promover automaticamente vínculos históricos.
+
+Medições, limitações e evidências em `VALIDACAO.md`, seção de ingestão nacional integrada.

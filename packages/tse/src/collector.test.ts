@@ -152,3 +152,14 @@ it('resposta concorrente não remove pausa global nem reutiliza ETag de versão 
   expect(c.snapshot().nextRequest).toBe(600500);
   expect(await c.tick(600499, async () => ({ status: 200, bytes: 0 }))).toBeNull();
 });
+
+it('bootstrap direcionado compartilha orçamento sem suspender a fila nacional', async () => {
+  const c = new ConservativeCollector(500, 1000);
+  c.add({ key: 'br', url: 'fixture:br', kind: 'aggregate', priority: 100 });
+  c.add({ key: 'config', url: 'fixture:config', kind: 'tracking', priority: 0 });
+  const transport = async () => ({ status: 200, bytes: 1 });
+  expect(await c.tick(0, transport, (j) => j.key === 'config')).toMatchObject({ key: 'config' });
+  expect(c.jobs.get('br')?.suspended).toBe(false);
+  expect(await c.tick(499, transport)).toBeNull();
+  expect(await c.tick(500, transport)).toMatchObject({ key: 'br' });
+});
