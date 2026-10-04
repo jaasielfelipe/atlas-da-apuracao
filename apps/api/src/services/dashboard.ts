@@ -1,6 +1,7 @@
 import type { FastifyInstance, FastifyReply, FastifyRequest } from 'fastify';
 import { z } from 'zod';
 import type { Store } from '../db/store';
+import { zoneFeed } from './zone-feed';
 import type {
   Bootstrap,
   Environment,
@@ -100,6 +101,15 @@ export function registerDashboard(app: FastifyInstance, prefix: string, source: 
       watchlist: ctx.store.watchlist(environment),
       captures: ctx.store.captures(environment),
     };
+  });
+  // Latest município–zona units that counted new sections (big-screen feed).
+  app.get(`${prefix}/zone-feed`, async (request, reply) => {
+    const ctx = open(reply);
+    if (!ctx) return reply;
+    const { limit } = z
+      .object({ limit: z.coerce.number().int().min(1).max(50).default(12) })
+      .parse(request.query);
+    return zoneFeed(ctx.store.db, environment, ctx.territories, limit);
   });
   // Cheap poll for big-screen views: no territory catalog.
   app.get(`${prefix}/status`, async (_request, reply) => {

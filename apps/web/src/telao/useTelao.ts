@@ -6,7 +6,14 @@ import type { EnvironmentConfig } from '../environment';
 import type { CollectionState, MapRow } from '../useDashboard';
 import { bulletins } from './race';
 import { changedTerritories, mergeTimeline, type Change } from './changes';
-import { DEMO_STEPS, demoComparison, demoMap, demoSnapshot, type DemoScenario } from './demo';
+import {
+  DEMO_STEPS,
+  demoComparison,
+  demoFeed,
+  demoMap,
+  demoSnapshot,
+  type DemoScenario,
+} from './demo';
 
 export type ComparisonResponse = {
   status?: string;
@@ -27,6 +34,19 @@ const LATEST_MS = 5_000,
   MAP_MS = 10_000,
   SLOW_MS = 30_000;
 
+/** One município–zona unit that counted new sections (see API zone-feed). */
+export type ZoneFeedItem = {
+  uf: string;
+  municipality: string;
+  municipalityName: string | null;
+  zone: string;
+  capturedAt: string;
+  status: string;
+  sections: { total: number; totalized: number; added: number };
+  validAdded: number;
+  added: Record<string, number>;
+};
+
 /** States changed by the latest observed bulletin, and when that was observed. */
 export type Changes = { items: Change[]; at: number };
 type Point = ComparisonResponse['timeline'][number];
@@ -41,6 +61,7 @@ export function useTelao(env: EnvironmentConfig) {
   const [series, setSeries] = useState<Snapshot[]>([]);
   const [map, setMap] = useState<MapRow[]>([]);
   const [changes, setChanges] = useState<Changes>({ items: [], at: 0 });
+  const [feed, setFeed] = useState<ZoneFeedItem[]>([]);
   const [comparison, setComparison] = useState<ComparisonResponse | null>(null);
   const [history, setHistory] = useState<Point[]>([]);
   const [comparisonError, setComparisonError] = useState('');
@@ -68,11 +89,13 @@ export function useTelao(env: EnvironmentConfig) {
   }, [base]);
 
   const pollMap = useCallback(async () => {
-    const [m, x] = await Promise.allSettled([
+    const [m, x, f] = await Promise.allSettled([
       api<MapRow[]>(`${base}/map?territory=br&office=president`),
       // Exterior is not a map row (no geometry) but belongs in the proportional state mosaic.
       api<{ snapshot: Snapshot | null }>(`${base}/latest?territory=zz&office=president`),
+      api<ZoneFeedItem[]>(`${base}/zone-feed?limit=10`),
     ]);
+    if (f.status === 'fulfilled') setFeed(f.value);
     if (m.status !== 'fulfilled') return;
     const rows = [
       ...m.value.filter((r) => r.territoryId !== 'zz'),
@@ -119,6 +142,7 @@ export function useTelao(env: EnvironmentConfig) {
     previous: series.at(-2) ?? null,
     map,
     changes,
+    feed,
     comparison,
     /** Every comparison point received since the screen opened (the API sends the last 20). */
     history,
@@ -140,6 +164,7 @@ export function useDemo(scenario: DemoScenario, intervalMs = 3000): Telao {
   const [history, setHistory] = useState<Point[]>([]);
   const [changes, setChanges] = useState<Changes>({ items: [], at: 0 });
   const previousMap = useRef<MapRow[] | null>(null);
+  const [feed, setFeed] = useState<ZoneFeedItem[]>([]);
   useEffect(() => {
     const timer = window.setInterval(
       () => setK((step) => (step >= DEMO_STEPS + 4 ? 0 : step + 1)),
@@ -148,6 +173,8 @@ export function useDemo(scenario: DemoScenario, intervalMs = 3000): Telao {
     return () => window.clearInterval(timer);
   }, [intervalMs]);
   const step = Math.min(k, DEMO_STEPS);
+  // One "verification" per demo bulletin (stable between renders).
+  const checkedAt = useMemo(() => Date.now(), [k]);
   const map = useMemo(() => demoMap(step, scenario), [step, scenario]);
   const comparison = useMemo(
     () => demoComparison(step, scenario, Date.now() - step * 1000),
@@ -166,6 +193,7 @@ export function useDemo(scenario: DemoScenario, intervalMs = 3000): Telao {
     previousMap.current = map;
     if (changed.length) setChanges({ items: changed, at: Date.now() });
     setHistory((h) => (k === 0 ? comparison.timeline : mergeTimeline(h, comparison.timeline)));
+    setFeed((items) => (k === 0 ? [] : [...demoFeed(step, scenario), ...items].slice(0, 10)));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [k, scenario]);
   return {
@@ -174,6 +202,7 @@ export function useDemo(scenario: DemoScenario, intervalMs = 3000): Telao {
     previous: series.at(-2) ?? null,
     map,
     changes,
+    feed,
     comparison,
     history,
     comparisonError: '',
@@ -183,7 +212,7 @@ export function useDemo(scenario: DemoScenario, intervalMs = 3000): Telao {
       lastCapture: null,
       collection: { running: true, lastObservation: null, collector: null, coverage: null },
     },
-    lastOk: Date.now(),
+    lastOk: checkedAt,
     error: '',
   };
 }

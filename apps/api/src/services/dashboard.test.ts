@@ -67,6 +67,10 @@ it('painel ao vivo oficial: isolado, mapa nacional, cobertura zonal e favoritos 
       collection: { running: false, coverage: { expectedSegments: 6292, observedSegments: 1 } },
     });
     expect(status.territories).toBeUndefined(); // cheap poll: no catalog
+    // Zone feed: the captured unit counted 0 sections (partial, pre-count) → nothing to show.
+    const feed = (await app.inject('/api/v1/live/official/zone-feed')).json();
+    expect(Array.isArray(feed)).toBe(true);
+    expect(feed.every((f: any) => f.sections.added > 0)).toBe(true);
     const latest = (await app.inject('/api/v1/live/official/latest?territory=br')).json();
     expect(latest.snapshot.environment).toBe('official');
     const map = (await app.inject('/api/v1/live/official/map?territory=br')).json();

@@ -13,7 +13,9 @@ test('telão: pista, placar, mesmas zonas, faixa de UFs e novo boletim ao vivo',
   await expect(page.getByText('Números e horários sintéticos.', { exact: false })).toBeVisible();
   await expect(page.getByRole('img', { name: /Pista da apuração/ })).toBeVisible();
   await expect(page.locator('.race-runner')).toHaveCount(2);
-  await expect(page.locator('.others li')).not.toHaveCount(0);
+  await expect(page.locator('.others-line')).toContainText('Demais');
+  await expect(page.locator('.region-name').first()).toContainText('Sul');
+  await expect(page.locator('.feed')).toBeVisible();
   await expect(page.locator('.stats').first()).toContainText('Votos apurados');
   await expect(page.locator('.outcome')).toHaveCount(4);
   await expect(page.locator('.mosaic .col')).not.toHaveCount(0);
@@ -91,6 +93,8 @@ test('telão demonstração: boletins sintéticos em sequência e fatos aritmét
   await expect(page.locator('.outcome.on')).toContainText('Vitória matemática', {
     timeout: 45_000,
   });
+  // Results coming in: synthetic município–zona updates with votes added in this election.
+  await expect(page.locator('.feed li').first()).toContainText('seções');
   // The other outcomes stay on screen, faded.
   await expect(page.locator('.outcome:not(.on)')).toHaveCount(3);
   await expect(

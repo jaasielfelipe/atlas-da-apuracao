@@ -233,20 +233,32 @@
   transition: width 1400ms cubic-bezier(0.2, 0.8, 0.2, 1);
 }
 
-/* Main grid: race spans the height; facts sit above totals and same-zones. */
+/* Main grid: the race is the centred hero; context on both sides; regions mosaic below. */
 .t-main {
   display: grid;
-  grid-template-columns: 680px 440px 1fr;
-  grid-template-rows: auto auto minmax(0, 1fr) 118px;
+  grid-template-columns: 440px 760px minmax(0, 1fr);
+  grid-template-rows: minmax(0, 1fr) 136px;
   grid-template-areas:
-    'hero outcomes outcomes'
-    'hero totals map'
-    'hero same map'
+    'left hero right'
     'mosaic mosaic mosaic';
-  column-gap: 56px;
-  row-gap: 22px;
-  padding: 22px 48px 20px;
+  column-gap: 48px;
+  row-gap: 18px;
+  padding: 18px 48px 16px;
   min-height: 0;
+}
+.t-left,
+.t-right {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  min-height: 0;
+  overflow: hidden;
+}
+.t-left {
+  grid-area: left;
+}
+.t-right {
+  grid-area: right;
 }
 .t-empty {
   display: grid;
@@ -255,47 +267,61 @@
   color: var(--text-secondary);
 }
 
-/* Possible outcomes: always on screen, faded while open, lit when guaranteed */
+/* Possible outcomes: the one place with cards. Quiet outline while open; lit when guaranteed. */
 .t-outcomes {
-  grid-area: outcomes;
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 6px;
 }
 .outcomes {
   display: grid;
-  grid-template-columns: 1.5fr 1fr 1fr 1fr;
-  gap: 28px;
+  grid-template-columns: 1fr;
+  gap: 8px;
 }
-.outcome {
+.outcome.card {
   display: grid;
-  grid-template-columns: 26px minmax(0, 1fr);
-  column-gap: 10px;
+  grid-template-columns: 24px minmax(0, 1fr);
+  column-gap: 12px;
   align-items: center;
-  opacity: 0.32;
-  transition: opacity 900ms ease;
+  padding: 9px 14px;
+  border-radius: 10px;
+  border: 1px solid var(--surface-1);
+  background: transparent;
+  transition:
+    background 900ms ease,
+    border-color 900ms ease,
+    box-shadow 900ms ease;
 }
 .outcome svg {
-  width: 26px;
-  height: 26px;
+  width: 22px;
+  height: 22px;
   grid-row: span 2;
   fill: none;
-  stroke: var(--text-muted);
+  stroke: var(--surface-1);
   stroke-width: 1.8;
   stroke-linecap: round;
   stroke-linejoin: round;
 }
 .outcome .o-title {
-  font-size: 18px;
+  font-size: 16px;
+  font-weight: 600;
+  line-height: 1.25;
+  color: var(--text-muted);
+  opacity: 0.75;
+}
+.outcome .o-title b {
   font-weight: 700;
-  line-height: 1.2;
+  filter: saturate(0.4);
 }
 .outcome .o-sub {
-  font-size: 12px;
+  font-size: 11px;
   color: var(--text-muted);
+  opacity: 0.6;
 }
-.outcome.on {
-  opacity: 1;
+.outcome.card.on {
+  border-color: rgba(229, 166, 64, 0.7);
+  background: rgba(229, 166, 64, 0.1);
+  box-shadow: 0 0 24px -8px rgba(229, 166, 64, 0.45);
 }
 .outcome.on svg {
   stroke: var(--amber);
@@ -303,11 +329,23 @@
   animation: t-light 1200ms cubic-bezier(0.2, 0.8, 0.2, 1);
 }
 .outcome.on .o-title {
+  color: var(--text-primary);
+  opacity: 1;
+  font-size: 18px;
   animation: t-reveal 900ms cubic-bezier(0.2, 0.8, 0.2, 1);
 }
+.outcome.on .o-title b {
+  filter: none;
+}
+.outcome.on .o-sub {
+  color: var(--text-secondary);
+  opacity: 1;
+}
 .t-outcomes small {
-  font-size: 12px;
+  font-size: 11px;
+  line-height: 1.4;
   color: var(--text-muted);
+  opacity: 0.8;
 }
 @keyframes t-light {
   0% {
@@ -1047,4 +1085,299 @@
 }
 .t-same .sz-delta {
   font-size: 17px;
+}
+
+/* ---- Layout round 5: hero centred, demoted indicators, feed, regions, quiet live marker ---- */
+.t-hero {
+  align-items: stretch;
+}
+.t-hero .track {
+  width: 548px;
+}
+.t-hero .race-head {
+  gap: 48px;
+}
+.t-hero .race-legend,
+.t-hero .race-note {
+  text-align: center;
+  justify-content: center;
+}
+.t-totals {
+  gap: 10px;
+}
+
+/* Indicators and other candidates: secondary, one line each */
+.t-minor {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+dl.minor {
+  margin: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 22px;
+}
+dl.minor > div {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+}
+dl.minor dt {
+  font-size: 13px;
+  color: var(--text-muted);
+}
+dl.minor dd {
+  margin: 0;
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--text-secondary);
+  white-space: nowrap;
+}
+dl.minor dd small {
+  margin-left: 4px;
+  font-size: 12px;
+  font-weight: 400;
+  color: var(--text-muted);
+}
+.t-minor .others {
+  font-size: 13px;
+  color: var(--text-muted);
+}
+
+/* Right column: map takes the room left by the feed and the trend */
+.t-right .t-map {
+  flex: 1 1 auto;
+  min-height: 0;
+  display: block;
+}
+.t-right .t-map .ufmap {
+  height: 100%;
+}
+
+/* "Chegando agora": results coming in, newest first */
+.feed {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  flex: none;
+}
+.feed ol {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+}
+.feed li {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  column-gap: 12px;
+  row-gap: 1px;
+  font-size: 14px;
+  animation: t-feed-in 800ms cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+.feed .when {
+  width: 64px;
+  font-size: 12px;
+  color: var(--text-muted);
+  font-variant-numeric: tabular-nums;
+}
+.feed .where {
+  flex: 1 1 calc(100% - 80px);
+  color: var(--text-secondary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.feed .where b {
+  color: var(--text-primary);
+  font-weight: 600;
+}
+.feed .secs {
+  margin-left: 76px;
+  color: var(--text-muted);
+  font-size: 13px;
+}
+.feed .votes {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+.feed .votes i {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--mark);
+}
+.feed .votes.rest {
+  font-weight: 400;
+  color: var(--text-muted);
+}
+.feed-empty {
+  margin: 0;
+  font-size: 14px;
+  color: var(--text-muted);
+}
+@keyframes t-feed-in {
+  from {
+    transform: translateX(-14px);
+    opacity: 0;
+  }
+  to {
+    transform: none;
+    opacity: 1;
+  }
+}
+
+/* Mosaic grouped by region */
+.mosaic-cols {
+  gap: 18px;
+}
+.region {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.region-name {
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--text-secondary);
+  white-space: nowrap;
+}
+.region-name small {
+  font-size: 11px;
+  font-weight: 400;
+  letter-spacing: 0;
+  text-transform: none;
+  color: var(--text-muted);
+}
+.region-cols {
+  display: flex;
+  gap: 4px;
+  align-items: flex-end;
+}
+
+/* Live marker: quiet; a ring turns a quarter on every verification */
+.t-live {
+  padding: 6px 0;
+  background: none;
+}
+.t-live.fresh {
+  background: none;
+}
+.t-live strong {
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--text-secondary);
+}
+.t-live.fresh strong {
+  color: var(--amber);
+}
+.t-live small {
+  font-size: 13px;
+  color: var(--text-muted);
+}
+.check-ring {
+  width: 22px;
+  height: 22px;
+  flex: none;
+  transition: transform 700ms cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+.check-ring .track {
+  fill: none;
+  stroke: var(--surface-1);
+  stroke-width: 2;
+}
+.check-ring .arc {
+  fill: none;
+  stroke: var(--text-secondary);
+  stroke-width: 2;
+  stroke-linecap: round;
+}
+.t-live.fresh .check-ring .arc {
+  stroke: var(--amber);
+}
+.t-live.stale .check-ring .arc {
+  stroke: var(--text-muted);
+}
+
+/* Left column: every block keeps its height; the column never overlaps itself */
+.t-left > * {
+  flex-shrink: 0;
+}
+.outcome.card {
+  padding: 7px 14px;
+}
+.others-line {
+  margin: 0;
+  font-size: 13px;
+  line-height: 1.5;
+  color: var(--text-muted);
+}
+.others-line > span:first-child {
+  color: var(--text-secondary);
+  font-weight: 600;
+}
+.t-left .cohort-count {
+  font-size: 30px;
+}
+.t-left .same-zones .card-head p {
+  display: none;
+}
+
+/* Left column fit (1080 high): tighter totals, compact same-zones rows */
+.t-left {
+  gap: 14px;
+}
+.t-left .stats {
+  gap: 2px 24px;
+}
+.t-left .stats dt {
+  font-size: 12px;
+}
+.t-left .stats dd {
+  font-size: 20px;
+}
+.t-left .same-zones {
+  gap: 6px;
+}
+.t-left .cohort-line {
+  font-size: 14px;
+}
+.t-left .cohort-count {
+  font-size: 26px;
+}
+.t-left .sz-rows {
+  gap: 6px;
+}
+.t-left .sz-row {
+  grid-template-columns: 4px 74px 1fr 0.9fr 0.9fr;
+  gap: 10px;
+}
+.t-left .sz-name {
+  font-size: 15px;
+}
+.t-left .sz-name small {
+  display: none;
+}
+.t-left .sz-now {
+  font-size: 22px;
+}
+.t-left .sz-now small,
+.t-left .sz-then small,
+.t-left .sz-delta small {
+  font-size: 11px;
+}
+.t-left .sz-then {
+  font-size: 16px;
+}
+.t-left .sz-delta {
+  font-size: 15px;
 }

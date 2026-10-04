@@ -1,6 +1,6 @@
 import type { CandidateResult, Snapshot } from '../../../../packages/domain/src/index';
 import type { MapRow } from '../useDashboard';
-import type { ComparisonResponse } from './useTelao';
+import type { ComparisonResponse, ZoneFeedItem } from './useTelao';
 
 /**
  * DEMONSTRATION ONLY: a synthetic national count generated in the browser to show the big-screen
@@ -233,4 +233,30 @@ export function demoComparison(
     timeline: timeline as unknown as ComparisonResponse['timeline'],
     series: DEMO_SERIES,
   };
+}
+
+/** Synthetic município–zona updates for the demo feed (no real municipality names). */
+export function demoFeed(k: number, scenario: DemoScenario): ZoneFeedItem[] {
+  const ufs = Object.keys(ELECTORATE).filter((u) => u !== 'zz');
+  const sh = shares(progress(k), scenario);
+  return [0, 1, 2].map((j) => {
+    const seed = (k * 7 + j * 13) % 97;
+    const uf = ufs[(k * 5 + j * 11) % ufs.length];
+    const added = 4 + (seed % 26);
+    const valid = added * (180 + (seed % 60));
+    const tilt = ((seed % 21) - 10) / 100;
+    const l = Math.round(valid * Math.max(0.05, sh.l + tilt)),
+      f = Math.round(valid * Math.max(0.05, sh.f - tilt));
+    return {
+      uf,
+      municipality: String(10000 + seed * 37).slice(0, 5),
+      municipalityName: null,
+      zone: String(1 + ((seed * 3) % 400)).padStart(4, '0'),
+      capturedAt: new Date(Date.now() - j * 700).toISOString(),
+      status: 'partial',
+      sections: { total: 60, totalized: Math.min(60, added + seed), added },
+      validAdded: valid,
+      added: { 'demo-l': l, 'demo-f': f, 'demo-0': Math.max(0, valid - l - f) },
+    };
+  });
 }

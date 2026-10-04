@@ -5,6 +5,7 @@ import RaceTrack, { type Runner } from './RaceTrack';
 import SameZones, { SameZonesTrend } from './SameZones';
 import UfMap from './UfMap';
 import StateMosaic from './StateMosaic';
+import ZoneFeed from './ZoneFeed';
 import { useRotation } from './rotation';
 import { mathFacts, type MathFact } from './facts';
 import { Num, Rolling, duration, useAge, useFlash } from './motion';
@@ -89,6 +90,11 @@ function TelaoView({ env, data: t }: { env: EnvironmentConfig; data: TelaoData }
   const age = useAge(t.lastOk);
   const bulletinAge = useAge(current ? Date.parse(current.capturedAt) : null);
   const running = t.status?.collection?.running;
+  // One quarter turn of the ring per completed verification.
+  const [checks, setChecks] = useState(0);
+  useEffect(() => {
+    if (t.lastOk) setChecks((n) => n + 1);
+  }, [t.lastOk]);
   const facts = useMemo(() => (current ? mathFacts(current) : []), [current]);
   // Rotating focus shared by the map and the mosaic, largest electorates first.
   const rotationIds = useMemo(
@@ -146,7 +152,15 @@ function TelaoView({ env, data: t }: { env: EnvironmentConfig; data: TelaoData }
             {env.id !== 'official' && <span className="t-warning">{env.notice.text}</span>}
           </div>
           <div className={`t-live ${fresh ? 'fresh' : ''} ${t.error ? 'stale' : ''}`}>
-            <span className="pulse" aria-hidden="true" />
+            <svg
+              className="check-ring"
+              viewBox="0 0 24 24"
+              aria-hidden="true"
+              style={{ transform: `rotate(${checks * 90}deg)` }}
+            >
+              <circle cx="12" cy="12" r="9" className="track" />
+              <path d="M12 3a9 9 0 0 1 9 9" className="arc" />
+            </svg>
             <div>
               <strong>
                 {t.error
@@ -183,7 +197,32 @@ function TelaoView({ env, data: t }: { env: EnvironmentConfig; data: TelaoData }
           </main>
         ) : (
           <main className="t-main">
-            <Outcomes facts={facts} heroes={runners.map((r) => r.candidate)} slotOf={slotOf} />
+            <aside className="t-left">
+              <Outcomes facts={facts} heroes={runners.map((r) => r.candidate)} slotOf={slotOf} />
+              <section className="t-totals" aria-label="Totais da apuração">
+                <h2>Totais da apuração</h2>
+                <Totals s={current} />
+              </section>
+              <section className="t-minor" aria-label="Indicadores e demais candidaturas">
+                <Indicators s={current} leaders={leaders} series={t.series} />
+                <Others others={others} />
+              </section>
+              <section className="t-same">
+                <SameZones
+                  comparison={t.comparison?.comparison ?? null}
+                  timeline={t.comparison?.timeline ?? []}
+                  synthetic={env.id !== 'official'}
+                  showChart={false}
+                  unavailable={
+                    !env.comparison.available
+                      ? env.comparison.summary
+                      : t.comparisonError
+                        ? 'Comparação indisponível no momento; o resultado agregado segue atualizado.'
+                        : null
+                  }
+                />
+              </section>
+            </aside>
 
             <section className="t-hero" aria-label="Corrida pela maioria absoluta">
               <div className="race-head">
@@ -227,41 +266,21 @@ function TelaoView({ env, data: t }: { env: EnvironmentConfig; data: TelaoData }
               </p>
             </section>
 
-            <section className="t-totals" aria-label="Totais da apuração">
-              <h2>Totais da apuração</h2>
-              <Totals s={current} />
-              <Indicators s={current} leaders={leaders} series={t.series} />
-              <Others others={others} />
-            </section>
-
-            <section className="t-same">
-              <SameZones
-                comparison={t.comparison?.comparison ?? null}
-                timeline={t.comparison?.timeline ?? []}
-                synthetic={env.id !== 'official'}
-                showChart={false}
-                unavailable={
-                  !env.comparison.available
-                    ? env.comparison.summary
-                    : t.comparisonError
-                      ? 'Comparação indisponível no momento; o resultado agregado segue atualizado.'
-                      : null
-                }
-              />
-            </section>
-
-            <section className="t-map" aria-label="Mapa com foco rotativo por UF">
-              <UfMap
-                rows={t.map}
-                focus={rotation.focus}
-                since={rotation.since}
-                ms={rotation.ms}
-                bulletin={rotation.bulletin}
-                slotOf={slotOf}
-                heroes={leaders}
-              />
+            <aside className="t-right">
+              <section className="t-map" aria-label="Mapa com foco rotativo por UF">
+                <UfMap
+                  rows={t.map}
+                  focus={rotation.focus}
+                  since={rotation.since}
+                  ms={rotation.ms}
+                  bulletin={rotation.bulletin}
+                  slotOf={slotOf}
+                  heroes={leaders}
+                />
+              </section>
+              <ZoneFeed items={t.feed} heroes={runners.map((r) => r.candidate)} slotOf={slotOf} />
               <SameZonesTrend timeline={t.history} synthetic={env.id !== 'official'} />
-            </section>
+            </aside>
 
             <StateMosaic
               rows={t.map}
@@ -384,7 +403,7 @@ function Outcomes({
     <section className="t-outcomes" aria-label="Desfechos possíveis">
       <div className="outcomes" aria-live="polite">
         {cards.map((c) => (
-          <div key={c.key} className={`outcome ${c.on ? 'on' : ''}`}>
+          <div key={c.key} className={`outcome card ${c.on ? 'on' : ''}`}>
             <svg viewBox="0 0 24 24" aria-hidden="true">
               <circle cx="12" cy="12" r="10" />
               {c.on && <path d="M7 12.5l3.4 3.4L17.5 8.6" />}
@@ -397,8 +416,8 @@ function Outcomes({
         ))}
       </div>
       <small>
-        Fatos aritméticos: acendem só quando valem para qualquer resultado das seções restantes;
-        sujeitos a retificação. O resultado oficial é proclamado pelo TSE.
+        Acendem só quando garantidos pelos números publicados · sujeitos a retificação · resultado
+        oficial: TSE.
       </small>
     </section>
   );
@@ -455,7 +474,7 @@ function Indicators({
   const gap =
     a && b && (a.countedVotes ?? 0) > 0 ? (a.countedVotes ?? 0) - (b.countedVotes ?? 0) : null;
   return (
-    <dl className="stats three">
+    <dl className="minor">
       <div>
         <dt>Diferença</dt>
         <dd>
@@ -484,28 +503,18 @@ function Indicators({
   );
 }
 
+/** Other candidates, demoted to one line: name and share, largest first. */
 function Others({ others }: { others: CandidateResult[] }) {
-  const rest = others.slice(3);
+  const valid = others.filter((c) => c.validShare !== null);
   return (
-    <ol className="others">
-      {others.slice(0, 3).map((c) => (
-        <li key={c.id} className={c.validShare === null ? 'void' : ''}>
-          <span className="nm">{title(c.name)}</span>
-          <span className="sh">
-            {c.validShare === null ? '—' : <Num value={c.validShare} format={(v) => pct(v)} />}
-          </span>
-          <span className="vt">
-            <Num value={c.countedVotes} format={int} />
-          </span>
-        </li>
+    <p className="others-line">
+      <span>Demais</span>{' '}
+      {valid.map((c, i) => (
+        <span key={c.id}>
+          {i > 0 && ' · '}
+          {title(c.name).split(' ').at(-1)} <Num value={c.validShare} format={(v) => pct(v)} />
+        </span>
       ))}
-      {rest.length > 0 && (
-        <li className="more">
-          <span className="nm">e mais {rest.length} candidaturas</span>
-          <span className="sh">{pct(rest.reduce((a, c) => a + (c.validShare ?? 0), 0))}</span>
-          <span className="vt">{int(rest.reduce((a, c) => a + (c.countedVotes ?? 0), 0))}</span>
-        </li>
-      )}
-    </ol>
+    </p>
   );
 }
