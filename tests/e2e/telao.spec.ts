@@ -13,7 +13,8 @@ test('telão: pista, placar, mesmas zonas, faixa de UFs e novo boletim ao vivo',
   await expect(page.getByText('Números e horários sintéticos.', { exact: false })).toBeVisible();
   await expect(page.getByRole('img', { name: /Pista da apuração/ })).toBeVisible();
   await expect(page.locator('.race-runner')).toHaveCount(2);
-  await expect(page.locator('.board li')).not.toHaveCount(0);
+  await expect(page.locator('.others li')).not.toHaveCount(0);
+  await expect(page.locator('.totals').first()).toContainText('Votos apurados');
   await expect(page.locator('.ufs .uf')).toHaveCount(27);
   // Same-zones card never pairs real names with synthetic numbers.
   await expect(page.locator('.same-zones')).toContainText('Série L');
@@ -60,5 +61,29 @@ test('telão: pista, placar, mesmas zonas, faixa de UFs e novo boletim ao vivo',
         document.documentElement.scrollHeight <= window.innerHeight,
     ),
   ).toBe(true);
+  expect(errors).toEqual([]);
+});
+
+test('telão demonstração: boletins sintéticos em sequência e fatos aritméticos', async ({
+  page,
+}) => {
+  const errors: string[] = [];
+  page.on('pageerror', (e) => errors.push(e.message));
+  await page.setViewportSize({ width: 1920, height: 1080 });
+  await page.goto('/telao?demo=vitoria&ritmo=800');
+  await expect(page.locator('.t-badge')).toHaveText('DEMONSTRAÇÃO');
+  await expect(page.getByText('Não são resultados.', { exact: false })).toBeVisible();
+  // Never real names on synthetic numbers.
+  await expect(page.locator('.race-runner .name').first()).toContainText('Candidatura');
+  const first = await page.locator('.t-counted .big').getAttribute('aria-label');
+  await expect(page.locator('.t-counted .big')).not.toHaveAttribute('aria-label', first!, {
+    timeout: 5_000,
+  });
+  await expect(page.locator('.fact-chip.victory')).toContainText('Vitória matemática', {
+    timeout: 45_000,
+  });
+  await expect(
+    page.locator('.race-runner').filter({ hasText: 'passou da meta ajustada' }),
+  ).toHaveCount(1);
   expect(errors).toEqual([]);
 });

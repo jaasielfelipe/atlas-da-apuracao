@@ -1,12 +1,14 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
-import type { Snapshot } from '../../../../packages/domain/src/index';
-import { environments, type DashboardEnvironment } from '../environment';
+import { useEffect, useMemo, useState } from 'react';
+import type { CandidateResult, Snapshot } from '../../../../packages/domain/src/index';
+import { environments, type DashboardEnvironment, type EnvironmentConfig } from '../environment';
 import RaceTrack, { type Runner } from './RaceTrack';
 import SameZones from './SameZones';
+import { mathFacts, type MathFact } from './facts';
 import { Rolling, duration, useAge, useFlash } from './motion';
-import { paint, useSlots } from './paint';
+import { paint, useSlots, type Slot } from './paint';
 import { increment, leaders as pickLeaders, pace, raceState } from './race';
-import { useTelao } from './useTelao';
+import { useDemo, useTelao, type Telao as TelaoData } from './useTelao';
+import type { DemoScenario } from './demo';
 import './telao.css';
 
 const int = (v: number) => new Intl.NumberFormat('pt-BR').format(Math.round(v));
@@ -22,6 +24,10 @@ const clock = (iso: string) =>
     minute: '2-digit',
     second: '2-digit',
   }).format(new Date(iso));
+const title = (name: string) =>
+  name
+    .toLocaleLowerCase('pt-BR')
+    .replace(/(^|\s)(\p{L})/gu, (_, s: string, l: string) => s + l.toLocaleUpperCase('pt-BR'));
 
 /** Fixed 1920×1080 stage scaled to the window: the layout never reflows on the big screen. */
 function useStageScale() {
@@ -35,21 +41,52 @@ function useStageScale() {
   return scale;
 }
 
+/** Route entry: `?demo` (fixture only) plays a synthetic count to show the motion. */
 export default function Telao({ environment }: { environment: DashboardEnvironment }) {
-  const env = environments[environment];
-  const t = useTelao(env);
+  const query = new URLSearchParams(window.location.search);
+  if (environment === 'fixture' && query.has('demo')) {
+    const scenario: DemoScenario = query.get('demo') === 'vitoria' ? 'vitoria' : 'segundo-turno';
+    const pace = Math.max(800, Math.min(10_000, Number(query.get('ritmo')) || 3000));
+    return <DemoTelao scenario={scenario} intervalMs={pace} />;
+  }
+  return <LiveTelao env={environments[environment]} />;
+}
+function LiveTelao({ env }: { env: EnvironmentConfig }) {
+  return <TelaoView env={env} data={useTelao(env)} />;
+}
+function DemoTelao({ scenario, intervalMs }: { scenario: DemoScenario; intervalMs: number }) {
+  const env: EnvironmentConfig = {
+    ...environments.fixture,
+    badge: 'DEMONSTRAÇÃO',
+    notice: {
+      strong: 'Demonstração.',
+      text: 'Apuração sintética gerada no navegador para mostrar o movimento. Não são resultados.',
+    },
+  };
+  return <TelaoView env={env} data={useDemo(scenario, intervalMs)} />;
+}
+
+function TelaoView({ env, data: t }: { env: EnvironmentConfig; data: TelaoData }) {
   const scale = useStageScale();
   const theme =
     new URLSearchParams(window.location.search).get('tema') === 'claro' ? 'light' : 'dark';
   const current = t.current,
     previous = t.previous;
-  const leaders = useMemo(() => (current ? pickLeaders(current) : []), [current]);
+  const series = t.comparison?.series;
+  // Heroes: the two series candidates when their identities are known (official: Lula and
+  // Flávio, even before the first vote); otherwise the two leading candidates.
+  const leaders = useMemo(() => {
+    if (!current) return [];
+    const byId = (id?: string) => current.candidates.find((c) => c.id === id);
+    const known = [byId(series?.bolsonaro.id), byId(series?.lula_haddad.id)];
+    return known[0] && known[1] ? (known as CandidateResult[]) : pickLeaders(current);
+  }, [current, series]);
   const slotOf = useSlots(leaders, t.comparison?.series);
   const fresh = useFlash(current?.digest);
   const age = useAge(t.lastOk);
   const bulletinAge = useAge(current ? Date.parse(current.capturedAt) : null);
   const running = t.status?.collection?.running;
-  const live = useRef<HTMLDivElement>(null);
+  const facts = useMemo(() => (current ? mathFacts(current) : []), [current]);
 
   const race = current
     ? raceState(
@@ -63,25 +100,25 @@ export default function Telao({ environment }: { environment: DashboardEnvironme
         leaders.map((l) => l.id),
       )
     : null;
-  const runners: Runner[] = leaders.map((c, i) => {
-    const before = previous?.candidates.find((p) => p.id === c.id)?.countedVotes ?? null;
-    const inc = increment(c.countedVotes ?? 0, before);
-    return {
-      candidate: c,
-      slot: slotOf(c.id),
-      votes: c.countedVotes ?? 0,
-      from: inc.from,
-      lane: i === 0 ? -8 : 8,
-    };
-  });
-  // Lanes follow the candidate's slot, not the rank, so the drawing never swaps on a lead change.
-  runners.sort((a, b) => (a.slot ?? 'z').localeCompare(b.slot ?? 'z'));
-  runners.forEach((r, i) => (r.lane = i === 0 ? -8 : 8));
-  const rate = pace(t.series);
-  const remaining =
-    current && current.electorate.total - current.electorate.totalized >= 0
-      ? current.electorate.total - current.electorate.totalized
-      : null;
+  const runners: Runner[] = leaders
+    .map((c) => {
+      const before = previous?.candidates.find((p) => p.id === c.id)?.countedVotes ?? null;
+      return {
+        candidate: c,
+        slot: slotOf(c.id),
+        votes: c.countedVotes ?? 0,
+        from: increment(c.countedVotes ?? 0, before).from,
+        lane: -8 as -8 | 8,
+      };
+    })
+    // Lanes and columns follow the candidate's slot, not the rank: a lead change never swaps them.
+    .sort((a, b) => (a.slot ?? 'z').localeCompare(b.slot ?? 'z'))
+    .map((r, i) => ({ ...r, lane: (i === 0 ? -8 : 8) as -8 | 8 }));
+  const others = current
+    ? [...current.candidates]
+        .filter((c) => !leaders.some((l) => l.id === c.id))
+        .sort((a, b) => (b.countedVotes ?? -1) - (a.countedVotes ?? -1))
+    : [];
 
   return (
     <div className="telao-viewport" data-theme={theme}>
@@ -91,9 +128,11 @@ export default function Telao({ environment }: { environment: DashboardEnvironme
             <strong>ATLAS DA APURAÇÃO</strong>
             <span>Presidente · 1º turno · Brasil</span>
           </div>
-          <span className={`t-badge ${env.id}`}>{env.badge}</span>
-          {env.id !== 'official' && <span className="t-warning">{env.notice.text}</span>}
-          <div className={`t-live ${fresh ? 'fresh' : ''} ${t.error ? 'stale' : ''}`} ref={live}>
+          <div className="t-env">
+            <span className={`t-badge ${env.id}`}>{env.badge}</span>
+            {env.id !== 'official' && <span className="t-warning">{env.notice.text}</span>}
+          </div>
+          <div className={`t-live ${fresh ? 'fresh' : ''} ${t.error ? 'stale' : ''}`}>
             <span className="pulse" aria-hidden="true" />
             <div>
               <strong>
@@ -107,7 +146,7 @@ export default function Telao({ environment }: { environment: DashboardEnvironme
               </strong>
               <small>
                 {current ? `boletim TSE ${clock(current.sourceGeneratedAt)}` : 'aguardando boletim'}
-                {bulletinAge !== null && ` · capturado há ${duration(bulletinAge)}`}
+                {bulletinAge !== null && ` · há ${duration(bulletinAge)}`}
                 {age !== null && ` · verificado há ${duration(age)}`}
               </small>
             </div>
@@ -131,40 +170,24 @@ export default function Telao({ environment }: { environment: DashboardEnvironme
           </main>
         ) : (
           <main className="t-main">
-            <section className="card race" aria-label="Corrida pela maioria absoluta">
+            <Facts facts={facts} slotOf={slotOf} />
+
+            <section className="t-hero" aria-label="Corrida pela maioria absoluta">
               <div className="race-head">
                 {runners.length === 0 && (
                   <p className="race-waiting">
                     Aguardando os primeiros votos válidos apurados para posicionar as candidaturas.
                   </p>
                 )}
-                {runners.map((r) => {
-                  const p = paint(r.slot);
-                  const delta = r.votes - r.from;
-                  const missing = Math.max(0, race.toWin - r.votes);
-                  return (
-                    <div key={r.candidate.id} className="race-runner">
-                      <span className="name" style={{ color: p.main }}>
-                        {r.candidate.name}
-                      </span>
-                      <Rolling value={r.votes} format={int} className="votes" />
-                      <span className="share">
-                        {r.candidate.validShare === null ? '—' : pct(r.candidate.validShare)} dos
-                        válidos
-                        {previous && (
-                          <em key={current.digest} className="inc" style={{ background: p.soft }}>
-                            +{int(delta)}
-                          </em>
-                        )}
-                      </span>
-                      <span className="distance">
-                        {missing > 0
-                          ? `faltam ${int(missing)} para a meta ajustada`
-                          : 'passou da meta ajustada'}
-                      </span>
-                    </div>
-                  );
-                })}
+                {runners.map((r) => (
+                  <RunnerHead
+                    key={r.candidate.id}
+                    r={r}
+                    toWin={race.toWin}
+                    hasPrevious={!!previous}
+                    digest={current.digest}
+                  />
+                ))}
               </div>
               <RaceTrack
                 race={race}
@@ -174,70 +197,56 @@ export default function Telao({ environment }: { environment: DashboardEnvironme
               <ul className="race-legend">
                 <li>
                   <i className="sw fixed" />
-                  50% dos aptos: {int(race.fixedLine)}
+                  50% dos eleitores aptos · {int(race.fixedLine)}
                 </li>
                 <li>
                   <i className="sw target" />
-                  Meta ajustada: <Rolling value={race.toWin} format={int} />
+                  Meta ajustada · <Rolling value={race.toWin} format={int} />
                 </li>
-                <li>Abstenções: {int(race.abstentions)}</li>
-                <li>Brancos e nulos: {int(race.blankNull)}</li>
-                <li>Outros candidatos: {int(race.others)}</li>
+                <li>
+                  <i className="sw inc" />
+                  trecho do último boletim
+                </li>
               </ul>
               <p className="race-note">
-                Pista fixa de 0 a 55% dos eleitores aptos, em votos. Meta ajustada = metade dos
-                votos válidos ainda possíveis (aptos − abstenções − brancos − nulos − anulados
-                apurados); recua a cada boletim. Trecho claro: último boletim.
+                Pista fixa de 0 a 55% dos eleitores aptos, medida em votos. Meta ajustada: metade
+                dos votos válidos ainda possíveis (aptos − ausentes − brancos − nulos − anulados já
+                apurados); recua a cada boletim.
               </p>
             </section>
 
-            <div className="t-col">
-              <Scoreboard snapshot={current} previous={previous} slotOf={slotOf} />
-              <section className="card facts" aria-label="Indicadores da apuração">
-                <Fact label="Diferença 1º – 2º">
-                  {leaders.length === 2 ? (
-                    <>
-                      <Rolling
-                        value={(leaders[0].countedVotes ?? 0) - (leaders[1].countedVotes ?? 0)}
-                        format={int}
-                      />
-                      <small>
-                        {leaders[0].validShare !== null && leaders[1].validShare !== null
-                          ? `${pct(leaders[0].validShare - leaders[1].validShare)} dos válidos`
-                          : '—'}
-                      </small>
-                    </>
-                  ) : (
-                    '—'
-                  )}
-                </Fact>
-                <Fact label="Ritmo (10 min)">
-                  {rate ? (
-                    <>
-                      +{int(rate.sections)} seções
-                      <small>
-                        {rate.share === null ? '—' : `+${pct(rate.share / 100, 2)}`} em{' '}
-                        {Math.round(rate.minutes)} min
-                      </small>
-                    </>
-                  ) : (
-                    <>
-                      —<small>aguardando dois boletins</small>
-                    </>
-                  )}
-                </Fact>
-                <Fact label="Eleitores em seções não apuradas">
-                  <Rolling value={remaining} format={int} />
-                  <small>dado do TSE; não é previsão de votos</small>
-                </Fact>
-                <Fact label="Comparecimento apurado">
-                  <Rolling value={current.electorate.turnoutShare} format={(v) => pct(v)} />
-                  <small>nas seções instaladas</small>
-                </Fact>
-              </section>
-            </div>
+            <section className="t-totals" aria-label="Totais da apuração">
+              <h2>Totais da apuração</h2>
+              <Totals s={current} />
+              <h2 className="sub">Indicadores</h2>
+              <Indicators s={current} leaders={leaders} series={t.series} />
+              <h2 className="sub">Demais candidaturas</h2>
+              <ol className="others">
+                {others.slice(0, 10).map((c) => (
+                  <li key={c.id} className={c.validShare === null ? 'void' : ''}>
+                    <span className="nm">
+                      <b>{c.number}</b> {title(c.name)}
+                    </span>
+                    <span className="sh">
+                      {c.validShare === null ? (
+                        <span title={c.destination ?? ''}>—</span>
+                      ) : (
+                        <Rolling value={c.validShare} format={(v) => pct(v)} />
+                      )}
+                    </span>
+                    <span className="vt">
+                      {c.countedVotes === null ? (
+                        '—'
+                      ) : (
+                        <Rolling value={c.countedVotes} format={int} />
+                      )}
+                    </span>
+                  </li>
+                ))}
+              </ol>
+            </section>
 
-            <div className="t-col">
+            <section className="t-same">
               <SameZones
                 comparison={t.comparison?.comparison ?? null}
                 timeline={t.comparison?.timeline ?? []}
@@ -250,7 +259,7 @@ export default function Telao({ environment }: { environment: DashboardEnvironme
                       : null
                 }
               />
-            </div>
+            </section>
 
             <UfStrip rows={t.map} slotOf={slotOf} leaderIds={leaders.map((l) => l.id)} />
           </main>
@@ -258,80 +267,172 @@ export default function Telao({ environment }: { environment: DashboardEnvironme
         <div className="sr-only" aria-live="polite">
           {current &&
             `${runners.map((r) => `${r.candidate.name}: ${int(r.votes)} votos`).join('; ')}. ` +
-              `Meta ajustada ${int(race?.toWin ?? 0)}. Seções apuradas ${pct(current.sections.share ?? 0, 2)}.`}
+              `Seções apuradas ${pct(current.sections.share ?? 0, 2)}.`}
         </div>
       </div>
     </div>
   );
 }
 
-function Fact({ label, children }: { label: string; children: React.ReactNode }) {
+function RunnerHead({
+  r,
+  toWin,
+  hasPrevious,
+  digest,
+}: {
+  r: Runner;
+  toWin: number;
+  hasPrevious: boolean;
+  digest: string;
+}) {
+  const p = paint(r.slot);
+  const delta = r.votes - r.from;
+  const missing = Math.max(0, toWin - r.votes);
   return (
-    <div className="fact">
-      <span>{label}</span>
-      <strong>{children}</strong>
+    <div
+      className="race-runner"
+      style={{ ['--mark' as string]: p.main, ['--soft' as string]: p.soft }}
+    >
+      <span className="name">{title(r.candidate.name)}</span>
+      <Rolling value={r.votes} format={int} className="votes" />
+      <span className="share">
+        <Rolling value={r.candidate.validShare} format={(v) => pct(v)} className="pct" />
+        <small>dos válidos</small>
+        {hasPrevious && (
+          <em key={digest} className="inc">
+            +{int(delta)}
+          </em>
+        )}
+      </span>
+      <span className="distance">
+        {missing > 0 ? (
+          <>
+            faltam <Rolling value={missing} format={int} /> para a meta ajustada
+          </>
+        ) : (
+          'passou da meta ajustada'
+        )}
+      </span>
     </div>
   );
 }
 
-function Scoreboard({
-  snapshot,
-  previous,
-  slotOf,
-}: {
-  snapshot: Snapshot;
-  previous: Snapshot | null;
-  slotOf: (id: string) => 'a' | 'b' | undefined;
-}) {
-  const rows = [...snapshot.candidates].sort(
-    (a, b) => (b.countedVotes ?? -1) - (a.countedVotes ?? -1),
+/** Facts the published count already guarantees; shown only when true. */
+function Facts({ facts, slotOf }: { facts: MathFact[]; slotOf: (id: string) => Slot | undefined }) {
+  const name = (c: CandidateResult) => (
+    <b style={{ color: paint(slotOf(c.id)).main }}>{title(c.name)}</b>
   );
   return (
-    <section className="card board" aria-label="Votos por candidatura">
-      <header className="card-head">
-        <h2>Votos válidos</h2>
-        <Rolling value={snapshot.votes.valid} format={int} className="muted" />
-      </header>
-      <ol>
-        {rows.map((c) => {
-          const p = paint(slotOf(c.id));
-          const before = previous?.candidates.find((x) => x.id === c.id)?.validShare ?? null;
-          const delta =
-            c.validShare !== null && before !== null ? (c.validShare - before) * 100 : null;
-          return (
-            <li key={c.id} className={c.validShare === null ? 'void' : ''}>
-              <span className="nm">
-                <b>{c.number}</b> {c.name}
-              </span>
-              <span className="bar">
-                <span
-                  style={{
-                    width: `${Math.min(100, ((c.validShare ?? 0) / 0.6) * 100)}%`,
-                    background: p.main,
-                  }}
-                />
-                <i className="half" title="50% dos válidos apurados" />
-              </span>
-              <span className="sh">
-                {c.validShare === null ? (
-                  <span title={c.destination ?? ''}>—</span>
-                ) : (
-                  <Rolling value={c.validShare} format={(v) => pct(v)} />
-                )}
-              </span>
-              <span className="dl">
-                {delta === null
-                  ? ''
-                  : `${delta > 0 ? '+' : delta < 0 ? '−' : '±'}${Math.abs(delta).toFixed(1).replace('.', ',')}`}
-              </span>
-            </li>
-          );
-        })}
-      </ol>
-      <p className="note">
-        Escala 0–60%. Marca: 50% dos válidos apurados. Δ em p.p. desde o boletim anterior.
-      </p>
-    </section>
+    <div className="t-facts" aria-live="polite">
+      {facts.map((f) => (
+        <div key={f.kind} className={`fact-chip ${f.kind}`}>
+          <svg viewBox="0 0 24 24" aria-hidden="true">
+            <path d="M5 12.5l4.2 4.2L19 7" />
+          </svg>
+          {f.kind === 'victory' ? (
+            <span>Vitória matemática no 1º turno: {name(f.candidate)}</span>
+          ) : f.kind === 'finalists' ? (
+            <span>
+              {name(f.candidates[0])} e {name(f.candidates[1])} no 2º turno
+            </span>
+          ) : (
+            <span>2º turno confirmado</span>
+          )}
+        </div>
+      ))}
+      {facts.length > 0 && (
+        <small>
+          Fatos aritméticos sobre os números publicados, válidos para qualquer resultado das seções
+          restantes; sujeitos a retificação. O resultado oficial é proclamado pelo TSE.
+        </small>
+      )}
+    </div>
+  );
+}
+
+function Totals({ s }: { s: Snapshot }) {
+  const counted = s.votes.total;
+  const absent = Math.max(0, s.electorate.installed - s.electorate.turnout);
+  const of = (v: number | null, base: number | null) => (v === null || !base ? '' : pct(v / base));
+  const rows: [string, number | null, string][] = [
+    ['Eleitores aptos', s.electorate.total, ''],
+    ['Seções apuradas', s.sections.totalized, `de ${int(s.sections.total)}`],
+    [
+      'Votos apurados',
+      counted,
+      s.electorate.installed
+        ? `comparecimento ${of(s.electorate.turnout, s.electorate.installed)}`
+        : '',
+    ],
+    ['Ausentes', absent, of(absent, s.electorate.installed)],
+    ['Válidos', s.votes.valid, of(s.votes.valid, counted)],
+    ['Brancos', s.votes.blank, of(s.votes.blank, counted)],
+    ['Nulos', s.votes.null, of(s.votes.null, counted)],
+  ];
+  if ((s.votes.annulled ?? 0) > 0)
+    rows.push(['Anulados', s.votes.annulled, of(s.votes.annulled, counted)]);
+  if ((s.votes.subJudice ?? 0) > 0)
+    rows.push(['Sub judice', s.votes.subJudice, of(s.votes.subJudice, counted)]);
+  return (
+    <dl className="totals">
+      {rows.map(([label, value, note]) => (
+        <div key={label} className={label === 'Votos apurados' ? 'key' : ''}>
+          <dt>{label}</dt>
+          <dd>
+            <Rolling value={value} format={int} />
+          </dd>
+          <span className="note">{note}</span>
+        </div>
+      ))}
+    </dl>
+  );
+}
+
+function Indicators({
+  s,
+  leaders,
+  series,
+}: {
+  s: Snapshot;
+  leaders: CandidateResult[];
+  series: Snapshot[];
+}) {
+  const rate = pace(series);
+  const remaining = Math.max(0, s.electorate.total - s.electorate.totalized);
+  // Between the two heroes, whatever their order.
+  const [a, b] = [...leaders].sort((x, y) => (y.countedVotes ?? 0) - (x.countedVotes ?? 0));
+  const gap =
+    a && b && (a.countedVotes ?? 0) > 0 ? (a.countedVotes ?? 0) - (b.countedVotes ?? 0) : null;
+  const gapShare =
+    a && b && a.validShare !== null && b.validShare !== null
+      ? `${pct(a.validShare - b.validShare)} dos válidos`
+      : '';
+  return (
+    <dl className="totals indicators">
+      <div>
+        <dt>Diferença entre os dois</dt>
+        <dd>
+          <Rolling value={gap} format={int} />
+        </dd>
+        <span className="note">{gapShare}</span>
+      </div>
+      <div>
+        <dt>Ritmo (10 min)</dt>
+        <dd>{rate ? <Rolling value={rate.sections} format={(v) => `+${int(v)}`} /> : '—'}</dd>
+        <span className="note">
+          {rate
+            ? `seções · ${rate.share === null ? '—' : '+' + pct(rate.share / 100, 2)}`
+            : 'aguardando boletins'}
+        </span>
+      </div>
+      <div>
+        <dt>Eleitores em seções não apuradas</dt>
+        <dd>
+          <Rolling value={remaining} format={int} />
+        </dd>
+        <span className="note">não é previsão</span>
+      </div>
+    </dl>
   );
 }
 
@@ -341,12 +442,12 @@ function UfStrip({
   leaderIds,
 }: {
   rows: { territoryId: string; snapshot: Snapshot | null }[];
-  slotOf: (id: string) => 'a' | 'b' | undefined;
+  slotOf: (id: string) => Slot | undefined;
   leaderIds: string[];
 }) {
   const ufs = rows.filter((r) => r.territoryId.length === 2 && r.territoryId !== 'zz');
   return (
-    <section className="card ufs" aria-label="Apuração por UF">
+    <section className="ufs" aria-label="Apuração por UF">
       {ufs.map((r) => {
         const s = r.snapshot;
         const top = s
@@ -369,7 +470,7 @@ function UfStrip({
               {s?.sections.share == null ? '—' : pct(s.sections.share, 0)}
             </span>
             <span className="lead">
-              <i style={{ background: s ? paint(slot).main : 'transparent' }} />
+              <i style={{ background: s && lead !== null ? paint(slot).main : 'transparent' }} />
               {lead === null ? '—' : `+${lead.toFixed(1).replace('.', ',')}`}
             </span>
           </div>
