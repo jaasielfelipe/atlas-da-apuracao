@@ -60,6 +60,13 @@ it('painel ao vivo oficial: isolado, mapa nacional, cobertura zonal e favoritos 
     expect(boot.territories.filter((t: any) => t.kind === 'municipality').length).toBeGreaterThan(
       5000,
     );
+    const status = (await app.inject('/api/v1/live/official/status')).json();
+    expect(status).toMatchObject({
+      environment: 'official',
+      captures: 1,
+      collection: { running: false, coverage: { expectedSegments: 6292, observedSegments: 1 } },
+    });
+    expect(status.territories).toBeUndefined(); // cheap poll: no catalog
     const latest = (await app.inject('/api/v1/live/official/latest?territory=br')).json();
     expect(latest.snapshot.environment).toBe('official');
     const map = (await app.inject('/api/v1/live/official/map?territory=br')).json();

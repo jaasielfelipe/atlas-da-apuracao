@@ -159,6 +159,13 @@ export function officialComparisonHandler(path: string, historyPath: string, roo
         return {
           environment: 'official',
           comparison,
+          // Exact 2026 identities of each series (for display colors; no matching by name).
+          series: Object.fromEntries(
+            (['bolsonaro', 'lula_haddad'] as const).map((s) => [
+              s,
+              { id: identities[2026][s].id, number: identities[2026][s].number },
+            ]),
+          ),
           reconciliation: {
             acceptedSegments: dataset.matches.length,
             method: 'user_accepted_structural',

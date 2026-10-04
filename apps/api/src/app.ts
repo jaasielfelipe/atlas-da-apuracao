@@ -124,7 +124,13 @@ export async function createApp(
   const web = resolve(root, 'dist/web');
   if (existsSync(web)) {
     await app.register(fastifyStatic, { root: web, prefix: '/' });
-    for (const page of ['/live/official', '/live/simulated'])
+    for (const page of [
+      '/live/official',
+      '/live/simulated',
+      '/telao',
+      '/live/official/telao',
+      '/live/simulated/telao',
+    ])
       app.get(page, async (_request, reply) => reply.sendFile('index.html'));
     // Former read-only archive pages now live in the main dashboard.
     app.get('/official', async (_request, reply) => reply.redirect('/live/official'));

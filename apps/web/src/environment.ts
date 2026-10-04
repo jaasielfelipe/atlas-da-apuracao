@@ -90,8 +90,14 @@ export const environments: Record<DashboardEnvironment, EnvironmentConfig> = {
   },
 };
 
+/** Big-screen view: `/telao` (fixture) and `/live/<env>/telao`. */
+export function isTelao(pathname: string) {
+  return pathname === '/telao' || pathname.endsWith('/telao');
+}
+
 /** Route → environment. `/` is the fixture demo; real data lives under `/live/<env>`. */
 export function environmentFromPath(pathname: string): DashboardEnvironment {
+  pathname = pathname.replace(/\/telao$/, '') || '/';
   // `/official` and `/simulated` were the former archive pages; kept as aliases.
   if (pathname === '/live/official' || pathname === '/official') return 'official';
   if (pathname === '/live/simulated' || pathname === '/simulated') return 'simulated';

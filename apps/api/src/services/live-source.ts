@@ -104,6 +104,7 @@ export function liveSource(
         };
       return { store, territories: catalog.territories };
     },
+    status: (ctx) => ({ collection: collection(ctx) }),
     bootstrap(ctx) {
       const state = collection(ctx);
       return {

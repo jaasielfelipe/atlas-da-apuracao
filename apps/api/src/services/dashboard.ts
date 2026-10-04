@@ -24,6 +24,8 @@ export interface DashboardSource {
   ): Omit<Bootstrap, 'environment' | 'territories' | 'watchlist' | 'captures'> &
     Record<string, unknown>;
   coverageBasis: 'synthetic' | 'ea20';
+  /** Lightweight live state (collector, zone coverage) for frequent polling. */
+  status?(ctx: DashboardContext): Record<string, unknown>;
   /** Side effect of saving/removing a municipality (fixture: ingest its captures). */
   watch?(ctx: DashboardContext, territory: Territory, enabled: boolean): void;
   comparison(
@@ -97,6 +99,18 @@ export function registerDashboard(app: FastifyInstance, prefix: string, source: 
       territories: ctx.territories,
       watchlist: ctx.store.watchlist(environment),
       captures: ctx.store.captures(environment),
+    };
+  });
+  // Cheap poll for big-screen views: no territory catalog.
+  app.get(`${prefix}/status`, async (_request, reply) => {
+    const ctx = open(reply);
+    if (!ctx) return reply;
+    const captures = ctx.store.captures(environment);
+    return {
+      environment,
+      captures: captures.length,
+      lastCapture: captures.at(-1) ?? null,
+      ...(source.status?.(ctx) ?? {}),
     };
   });
   app.get(`${prefix}/territories`, async (request, reply) => {
