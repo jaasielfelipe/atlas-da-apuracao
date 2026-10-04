@@ -74,8 +74,10 @@ function TelaoView({ env, data: t }: { env: EnvironmentConfig; data: TelaoData }
   const scale = useStageScale();
   const theme =
     new URLSearchParams(window.location.search).get('tema') === 'claro' ? 'light' : 'dark';
+  // A pre-count snapshot (no section counted) is not a previous bulletin: otherwise the first real
+  // bulletin would be drawn entirely as "last bulletin" increment (whole track in the light tone).
   const current = t.current,
-    previous = t.previous;
+    previous = t.previous && t.previous.sections.totalized > 0 ? t.previous : null;
   const series = t.comparison?.series;
   // Heroes: the two series candidates when their identities are known (official: Lula and
   // Flávio, even before the first vote); otherwise the two leading candidates.
