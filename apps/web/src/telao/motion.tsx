@@ -109,3 +109,24 @@ export function useFlash(key: string | null | undefined, ms = 4000) {
   }, [key, ms]);
   return on;
 }
+
+/**
+ * Secondary numbers: no rolling; the new value settles in with a short, quiet fade.
+ * Keyed by the formatted text, so the animation runs only when the displayed value changes.
+ */
+export function Num({
+  value,
+  format,
+  className,
+}: {
+  value: number | null | undefined;
+  format: (n: number) => string;
+  className?: string;
+}) {
+  const text = value == null || !Number.isFinite(value) ? '—' : format(value);
+  return (
+    <span key={text} className={`num ${className ?? ''}`}>
+      {text}
+    </span>
+  );
+}

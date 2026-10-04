@@ -5,7 +5,7 @@ import type { UfRow } from './UfMap';
 
 const WIDTH = 1824,
   GAP = 4,
-  MIN = 16;
+  MIN = 22;
 const pct0 = (v: number) => `${Math.round(v * 100)}%`;
 
 /**
@@ -75,10 +75,10 @@ export default function StateMosaic({
                 ))}
                 {!valid && <span className="part none" style={{ flexGrow: 1 }} />}
               </span>
-              <span className="lbl">
-                {w >= 26 || on ? r.territoryId.toUpperCase().replace('ZZ', 'EXT') : ''}
+              <span className={w < 34 ? 'lbl narrow' : 'lbl'}>
+                {r.territoryId === 'zz' ? (w < 34 ? 'EX' : 'EXT') : r.territoryId.toUpperCase()}
               </span>
-              <span className="pc">{w >= 44 || on ? pct0(s.sections.share ?? 0) : ''}</span>
+              <span className="pc">{w >= 30 || on ? pct0(s.sections.share ?? 0) : ''}</span>
             </div>
           );
         })}

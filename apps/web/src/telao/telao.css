@@ -237,11 +237,11 @@
 .t-main {
   display: grid;
   grid-template-columns: 680px 440px 1fr;
-  grid-template-rows: auto minmax(0, 1fr) auto 112px;
+  grid-template-rows: auto auto minmax(0, 1fr) 118px;
   grid-template-areas:
-    'hero facts facts'
+    'hero outcomes outcomes'
     'hero totals map'
-    'hero totals same'
+    'hero same map'
     'mosaic mosaic mosaic';
   column-gap: 56px;
   row-gap: 22px;
@@ -255,37 +255,84 @@
   color: var(--text-secondary);
 }
 
-/* Facts */
-.t-facts {
-  grid-area: facts;
+/* Possible outcomes: always on screen, faded while open, lit when guaranteed */
+.t-outcomes {
+  grid-area: outcomes;
   display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 10px 36px;
-  min-height: 0;
+  flex-direction: column;
+  gap: 8px;
 }
-.fact-chip {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  font-size: 28px;
-  font-weight: 600;
-  animation: t-reveal 900ms cubic-bezier(0.2, 0.8, 0.2, 1);
+.outcomes {
+  display: grid;
+  grid-template-columns: 1.5fr 1fr 1fr 1fr;
+  gap: 28px;
 }
-.fact-chip svg {
-  width: 30px;
-  height: 30px;
-  flex: none;
+.outcome {
+  display: grid;
+  grid-template-columns: 26px minmax(0, 1fr);
+  column-gap: 10px;
+  align-items: center;
+  opacity: 0.32;
+  transition: opacity 900ms ease;
+}
+.outcome svg {
+  width: 26px;
+  height: 26px;
+  grid-row: span 2;
   fill: none;
-  stroke: var(--amber);
-  stroke-width: 2.6;
+  stroke: var(--text-muted);
+  stroke-width: 1.8;
   stroke-linecap: round;
   stroke-linejoin: round;
 }
-.t-facts small {
-  flex-basis: 100%;
-  font-size: 13px;
+.outcome .o-title {
+  font-size: 18px;
+  font-weight: 700;
+  line-height: 1.2;
+}
+.outcome .o-sub {
+  font-size: 12px;
   color: var(--text-muted);
+}
+.outcome.on {
+  opacity: 1;
+}
+.outcome.on svg {
+  stroke: var(--amber);
+  stroke-width: 2.4;
+  animation: t-light 1200ms cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+.outcome.on .o-title {
+  animation: t-reveal 900ms cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+.t-outcomes small {
+  font-size: 12px;
+  color: var(--text-muted);
+}
+@keyframes t-light {
+  0% {
+    transform: scale(0.6);
+    opacity: 0;
+  }
+  60% {
+    transform: scale(1.18);
+    opacity: 1;
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+/* Secondary numbers: quiet settle instead of rolling digits */
+.num {
+  animation: t-settle 700ms ease;
+}
+@keyframes t-settle {
+  from {
+    opacity: 0.35;
+  }
+  to {
+    opacity: 1;
+  }
 }
 @keyframes t-reveal {
   from {
@@ -488,7 +535,7 @@
   text-align: center;
 }
 
-/* Totals column */
+/* Totals column: compact stat grid (label above value, percentage inline) */
 .t-totals {
   grid-area: totals;
   display: flex;
@@ -496,46 +543,35 @@
   gap: 12px;
   min-height: 0;
 }
-.t-totals h2.sub {
-  margin-top: 12px;
-}
-.totals {
+.stats {
   margin: 0;
-  display: flex;
-  flex-direction: column;
-  gap: 3px;
-}
-.totals > div {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) auto 112px;
-  align-items: baseline;
-  gap: 16px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px 24px;
 }
-.totals dt {
-  white-space: nowrap;
-  font-size: 17px;
-  color: var(--text-secondary);
+.stats.three {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  padding-top: 4px;
 }
-.totals dd {
-  margin: 0;
-  font-size: 24px;
-  font-weight: 600;
-  text-align: right;
-}
-.totals .note {
-  font-size: 14px;
+.stats dt {
+  font-size: 13px;
   color: var(--text-muted);
-  text-align: right;
+  white-space: nowrap;
 }
-.totals .key dt {
-  color: var(--text-primary);
+.stats dd {
+  margin: 0;
+  font-size: 22px;
   font-weight: 600;
+  white-space: nowrap;
 }
-.totals .key dd {
-  font-size: 30px;
+.stats dd small {
+  margin-left: 6px;
+  font-size: 13px;
+  font-weight: 400;
+  color: var(--text-muted);
 }
-.indicators dd {
-  font-size: 24px;
+.stats .key dt {
+  color: var(--text-secondary);
 }
 .others {
   margin: 0;
@@ -543,18 +579,16 @@
   list-style: none;
   display: flex;
   flex-direction: column;
-  gap: 2px;
-  font-size: 15px;
+  gap: 1px;
+  font-size: 14px;
   color: var(--text-secondary);
 }
 .others li {
   display: grid;
-  grid-template-columns: 1fr 66px 110px;
-  gap: 12px;
+  grid-template-columns: minmax(0, 1fr) 56px 96px;
+  gap: 10px;
 }
-.others li.more {
-  color: var(--text-muted);
-}
+.others li.more,
 .others li.void {
   color: var(--text-muted);
 }
@@ -562,12 +596,6 @@
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-}
-.others .nm b {
-  display: inline-block;
-  min-width: 26px;
-  font-weight: 600;
-  color: var(--text-muted);
 }
 .others .sh,
 .others .vt {
@@ -578,6 +606,7 @@
 .t-same {
   grid-area: same;
   min-height: 0;
+  overflow: hidden;
 }
 .t-same .card-head p {
   display: none;
@@ -600,6 +629,26 @@
   grid-area: map;
   min-height: 0;
   overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+.t-map .ufmap {
+  flex: 1 1 auto;
+  min-height: 0;
+}
+.sz-trend {
+  margin: 0;
+  flex: none;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.sz-trend .sz-chart svg {
+  max-height: 150px;
+}
+.sz-trend .sz-chart figcaption {
+  font-size: 12px;
 }
 .ufmap {
   height: 100%;
@@ -762,15 +811,21 @@
   background: var(--surface-1);
 }
 .mosaic .lbl {
-  font-size: 13px;
+  font-size: 12px;
+  text-align: center;
   font-weight: 700;
   color: var(--text-secondary);
   white-space: nowrap;
   overflow: visible;
   height: 16px;
 }
+.mosaic .lbl.narrow {
+  font-size: 10px;
+  letter-spacing: -0.02em;
+}
 .mosaic .pc {
-  font-size: 12px;
+  text-align: center;
+  font-size: 11px;
   color: var(--text-muted);
   height: 14px;
   white-space: nowrap;
@@ -925,4 +980,27 @@
     animation: none !important;
     transition: none !important;
   }
+}
+
+/* Same zones in the middle column: compact rows, short chart, no caption */
+.t-same .sz-chart figcaption {
+  display: none;
+}
+.t-same .sz-cohort {
+  height: 14px;
+}
+.t-same .cohort-line {
+  font-size: 15px;
+}
+.t-same .sz-row {
+  padding: 0;
+}
+.t-same .sz-name {
+  font-size: 17px;
+}
+.t-same .sz-then {
+  font-size: 19px;
+}
+.t-same .sz-delta {
+  font-size: 17px;
 }

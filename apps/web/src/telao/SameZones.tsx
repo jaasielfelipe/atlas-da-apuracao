@@ -1,5 +1,5 @@
 import type { ZoneComparison } from '../../../../packages/domain/src/zones';
-import { Rolling } from './motion';
+import { Num } from './motion';
 import { paint } from './paint';
 
 type Point = Omit<ZoneComparison, 'rows'>;
@@ -41,11 +41,14 @@ export default function SameZones({
   timeline,
   unavailable,
   synthetic,
+  showChart = true,
 }: {
   comparison: ZoneComparison | null;
   timeline: Point[];
   unavailable: string | null;
   synthetic: boolean;
+  /** The trend chart can be placed elsewhere on the stage (see SameZonesTrend). */
+  showChart?: boolean;
 }) {
   const SERIES: Series = synthetic ? SYNTHETIC : OFFICIAL;
   const cohort = comparison?.coverage.comparable ?? 0;
@@ -73,7 +76,7 @@ export default function SameZones({
       ) : (
         <>
           <div className="cohort-line">
-            <Rolling value={cohort} format={int} className="cohort-count" />
+            <Num value={cohort} format={int} className="cohort-count" />
             <span>
               zonas na comparação
               <small>
@@ -96,7 +99,7 @@ export default function SameZones({
                     <small>2026 · mesmas zonas</small>
                   </div>
                   <div className="sz-now">
-                    <Rolling value={now} format={pct} />
+                    <Num value={now} format={pct} />
                     <small>
                       {now === null ? '—' : int(now * comparison.shares[2026].valid)} votos
                     </small>
@@ -115,10 +118,22 @@ export default function SameZones({
               );
             })}
           </div>
-          <Chart points={points} series={SERIES} />
+          {showChart && <Chart points={points} series={SERIES} />}
         </>
       )}
     </section>
+  );
+}
+
+/** Same-zones trend (2026 solid vs 2022 dashed, cohort size below), on its own. */
+export function SameZonesTrend({ timeline, synthetic }: { timeline: Point[]; synthetic: boolean }) {
+  const points = timeline.filter((p) => p.coverage.comparable > 0);
+  if (points.length < 2) return null;
+  return (
+    <figure className="sz-trend">
+      <h2>Mesmas zonas · evolução por captura</h2>
+      <Chart points={points} series={synthetic ? SYNTHETIC : OFFICIAL} />
+    </figure>
   );
 }
 

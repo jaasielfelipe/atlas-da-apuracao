@@ -14,7 +14,8 @@ test('telão: pista, placar, mesmas zonas, faixa de UFs e novo boletim ao vivo',
   await expect(page.getByRole('img', { name: /Pista da apuração/ })).toBeVisible();
   await expect(page.locator('.race-runner')).toHaveCount(2);
   await expect(page.locator('.others li')).not.toHaveCount(0);
-  await expect(page.locator('.totals').first()).toContainText('Votos apurados');
+  await expect(page.locator('.stats').first()).toContainText('Votos apurados');
+  await expect(page.locator('.outcome')).toHaveCount(4);
   await expect(page.locator('.mosaic .col')).not.toHaveCount(0);
   await expect(page.locator('.mosaic .col.focus')).toHaveCount(1);
   await expect(page.locator('.readout .uf-name')).not.toBeEmpty();
@@ -84,9 +85,11 @@ test('telão demonstração: boletins sintéticos em sequência e fatos aritmét
   await expect(page.locator('.t-counted .big')).not.toHaveAttribute('aria-label', first!, {
     timeout: 5_000,
   });
-  await expect(page.locator('.fact-chip.victory')).toContainText('Vitória matemática', {
+  await expect(page.locator('.outcome.on')).toContainText('Vitória matemática', {
     timeout: 45_000,
   });
+  // The other outcomes stay on screen, faded.
+  await expect(page.locator('.outcome:not(.on)')).toHaveCount(3);
   await expect(
     page.locator('.race-runner').filter({ hasText: 'passou da meta ajustada' }),
   ).toHaveCount(1);

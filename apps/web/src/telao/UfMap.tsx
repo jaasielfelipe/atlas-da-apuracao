@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import type { FeatureCollection } from 'geojson';
 import type { CandidateResult, Snapshot } from '../../../../packages/domain/src/index';
 import { camera, lerpBox, shapes, UF_NAMES, type Box } from './geo';
-import { Rolling } from './motion';
+import { Num } from './motion';
 import { paint, type Slot } from './paint';
 
 const ASPECT = 600 / 420;
@@ -162,7 +162,7 @@ function FocusReadout({
           style={{ ['--mark' as string]: paint(slotOf(c.id)).main }}
         >
           <b>{title(c.name)}</b>
-          <Rolling value={c.validShare} format={(v) => pct(v)} className="pct" />
+          <Num value={c.validShare} format={(v) => pct(v)} className="pct" />
           <small>{c.countedVotes === null ? '—' : int(c.countedVotes)}</small>
         </span>
       ))}
