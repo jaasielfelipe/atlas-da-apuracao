@@ -48,8 +48,11 @@ test('telão: pista, placar, mesmas zonas, faixa de UFs e novo boletim ao vivo',
         countedVotes: c.countedVotes === null ? null : c.countedVotes + 250_000,
       })),
     });
+    // Only the national bulletin advances; other territories (e.g. exterior) pass through.
+    if (!route.request().url().includes('territory=br'))
+      return route.fulfill({ response, json: body });
     if (Array.isArray(body)) return route.fulfill({ json: [...body, bump(body.at(-1))] });
-    return route.fulfill({ json: { ...body, snapshot: bump(body.snapshot) } });
+    return route.fulfill({ json: { ...body, snapshot: body.snapshot && bump(body.snapshot) } });
   };
   await page.route('**/api/v1/latest?*', next);
   await page.route('**/api/v1/snapshots?*', next);
