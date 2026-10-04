@@ -15,7 +15,12 @@ test('telão: pista, placar, mesmas zonas, faixa de UFs e novo boletim ao vivo',
   await expect(page.locator('.race-runner')).toHaveCount(2);
   await expect(page.locator('.others li')).not.toHaveCount(0);
   await expect(page.locator('.totals').first()).toContainText('Votos apurados');
-  await expect(page.locator('.ufs .uf')).toHaveCount(27);
+  await expect(page.locator('.mosaic .col')).not.toHaveCount(0);
+  await expect(page.locator('.mosaic .col.focus')).toHaveCount(1);
+  await expect(page.locator('.readout .uf-name')).not.toBeEmpty();
+  // Rotating focus moves to another state.
+  const firstFocus = await page.locator('.readout .uf-name').textContent();
+  await expect(page.locator('.readout .uf-name')).not.toHaveText(firstFocus!, { timeout: 12_000 });
   // Same-zones card never pairs real names with synthetic numbers.
   await expect(page.locator('.same-zones')).toContainText('Série L');
   await expect(page.locator('.same-zones')).not.toContainText('Lula');

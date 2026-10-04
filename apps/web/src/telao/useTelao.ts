@@ -58,14 +58,22 @@ export function useTelao(env: EnvironmentConfig) {
   }, [base]);
 
   const pollSlow = useCallback(async () => {
-    const [m, c, s] = await Promise.allSettled([
+    const [m, c, s, x] = await Promise.allSettled([
       api<MapRow[]>(`${base}/map?territory=br&office=president`),
       env.comparison.available
         ? api<ComparisonResponse>(`${base}/comparison?territory=br&office=president`)
         : Promise.reject(Error(env.comparison.summary)),
       api<StatusResponse>(`${base}/status`),
+      // Exterior is not a map row (no geometry) but belongs in the proportional state mosaic.
+      api<{ snapshot: Snapshot | null }>(`${base}/latest?territory=zz&office=president`),
     ]);
-    if (m.status === 'fulfilled') setMap(m.value);
+    if (m.status === 'fulfilled')
+      setMap([
+        ...m.value.filter((r) => r.territoryId !== 'zz'),
+        ...(x.status === 'fulfilled' && x.value.snapshot
+          ? [{ territoryId: 'zz', snapshot: x.value.snapshot }]
+          : []),
+      ]);
     if (c.status === 'fulfilled') {
       setComparison(c.value);
       setComparisonError('');

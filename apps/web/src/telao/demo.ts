@@ -10,8 +10,38 @@ export type DemoScenario = 'segundo-turno' | 'vitoria';
 export const DEMO_STEPS = 40;
 const REGISTERED = 158_745_502,
   SECTIONS = 472_075;
-const UFS =
-  'ac,al,ap,am,ba,ce,df,es,go,ma,mt,ms,mg,pa,pb,pr,pe,pi,rj,rn,rs,ro,rr,sc,sp,se,to'.split(',');
+/** Registered voters per UF/exterior (public reference values, used only to size the demo). */
+const ELECTORATE: Record<string, number> = {
+  ac: 613742,
+  al: 2442126,
+  am: 2798611,
+  ap: 576988,
+  ba: 11312752,
+  ce: 6996545,
+  df: 2258320,
+  es: 2991650,
+  go: 5080590,
+  ma: 5183115,
+  mg: 16372372,
+  ms: 2024430,
+  mt: 2637801,
+  pa: 6262397,
+  pb: 3248531,
+  pe: 7223450,
+  pi: 2704758,
+  pr: 8613657,
+  rj: 12857648,
+  rn: 2659825,
+  ro: 1265893,
+  rr: 401521,
+  rs: 8522545,
+  sc: 5734651,
+  se: 1740135,
+  sp: 34122892,
+  to: 1182023,
+  zz: 916534,
+};
+const UFS = Object.keys(ELECTORATE);
 export const DEMO_SERIES = {
   bolsonaro: { id: 'demo-f', number: '2' },
   lula_haddad: { id: 'demo-l', number: '1' },
@@ -98,13 +128,37 @@ export function demoSnapshot(k: number, scenario: DemoScenario, start: number): 
   };
 }
 
+/** National synthetic snapshot scaled to one territory's electorate. */
+function scaled(s: Snapshot, f: number): Snapshot {
+  const r = (v: number | null) => (v === null ? null : Math.round(v * f));
+  return {
+    ...s,
+    electorate: {
+      ...s.electorate,
+      total: r(s.electorate.total)!,
+      totalized: r(s.electorate.totalized)!,
+      installed: r(s.electorate.installed)!,
+      turnout: r(s.electorate.turnout)!,
+    },
+    votes: {
+      ...s.votes,
+      total: r(s.votes.total),
+      valid: r(s.votes.valid),
+      blank: r(s.votes.blank),
+      null: r(s.votes.null),
+    },
+    candidates: s.candidates.map((c) => ({ ...c, countedVotes: r(c.countedVotes) })),
+  };
+}
+
 export function demoMap(k: number, scenario: DemoScenario): MapRow[] {
   return UFS.map((uf, i) => {
     // Regions report at different speeds and lean differently (synthetic).
     const speed = 0.75 + ((i * 37) % 50) / 100;
     const lean = (((i * 53) % 27) - 13) / 100;
     const s = Math.min(1, progress(k) * speed);
-    const base = demoSnapshot(Math.round(s * DEMO_STEPS), scenario, 0);
+    const step = Math.round(s * DEMO_STEPS);
+    const base = scaled(demoSnapshot(step, scenario, 0), ELECTORATE[uf] / REGISTERED);
     const l = Math.max(0.05, base.candidates[0].validShare! + lean),
       f = Math.max(0.05, base.candidates[1].validShare! - lean);
     const valid = base.votes.valid ?? 0;

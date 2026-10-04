@@ -3,6 +3,9 @@ import type { CandidateResult, Snapshot } from '../../../../packages/domain/src/
 import { environments, type DashboardEnvironment, type EnvironmentConfig } from '../environment';
 import RaceTrack, { type Runner } from './RaceTrack';
 import SameZones from './SameZones';
+import UfMap from './UfMap';
+import StateMosaic from './StateMosaic';
+import { useRotation } from './rotation';
 import { mathFacts, type MathFact } from './facts';
 import { Rolling, duration, useAge, useFlash } from './motion';
 import { paint, useSlots, type Slot } from './paint';
@@ -87,6 +90,16 @@ function TelaoView({ env, data: t }: { env: EnvironmentConfig; data: TelaoData }
   const bulletinAge = useAge(current ? Date.parse(current.capturedAt) : null);
   const running = t.status?.collection?.running;
   const facts = useMemo(() => (current ? mathFacts(current) : []), [current]);
+  // Rotating focus shared by the map and the mosaic, largest electorates first.
+  const rotationIds = useMemo(
+    () =>
+      t.map
+        .filter((r) => r.snapshot && r.territoryId !== 'zz')
+        .sort((a, b) => b.snapshot!.electorate.total - a.snapshot!.electorate.total)
+        .map((r) => r.territoryId),
+    [t.map],
+  );
+  const rotation = useRotation(rotationIds);
 
   const race = current
     ? raceState(
@@ -197,7 +210,7 @@ function TelaoView({ env, data: t }: { env: EnvironmentConfig; data: TelaoData }
               <ul className="race-legend">
                 <li>
                   <i className="sw fixed" />
-                  50% dos eleitores aptos · {int(race.fixedLine)}
+                  50% dos aptos · {int(race.fixedLine)}
                 </li>
                 <li>
                   <i className="sw target" />
@@ -205,13 +218,12 @@ function TelaoView({ env, data: t }: { env: EnvironmentConfig; data: TelaoData }
                 </li>
                 <li>
                   <i className="sw inc" />
-                  trecho do último boletim
+                  último boletim
                 </li>
               </ul>
               <p className="race-note">
-                Pista fixa de 0 a 55% dos eleitores aptos, medida em votos. Meta ajustada: metade
-                dos votos válidos ainda possíveis (aptos − ausentes − brancos − nulos − anulados já
-                apurados); recua a cada boletim.
+                Pista: 0–55% dos eleitores aptos, em votos. Meta ajustada: metade dos válidos ainda
+                possíveis; recua a cada boletim.
               </p>
             </section>
 
@@ -222,7 +234,7 @@ function TelaoView({ env, data: t }: { env: EnvironmentConfig; data: TelaoData }
               <Indicators s={current} leaders={leaders} series={t.series} />
               <h2 className="sub">Demais candidaturas</h2>
               <ol className="others">
-                {others.slice(0, 10).map((c) => (
+                {others.slice(0, 3).map((c) => (
                   <li key={c.id} className={c.validShare === null ? 'void' : ''}>
                     <span className="nm">
                       <b>{c.number}</b> {title(c.name)}
@@ -243,7 +255,29 @@ function TelaoView({ env, data: t }: { env: EnvironmentConfig; data: TelaoData }
                     </span>
                   </li>
                 ))}
+                {others.length > 3 && (
+                  <li className="more">
+                    <span className="nm">e mais {others.length - 3} candidaturas</span>
+                    <span className="sh">
+                      {pct(others.slice(3).reduce((a, c) => a + (c.validShare ?? 0), 0))}
+                    </span>
+                    <span className="vt">
+                      {int(others.slice(3).reduce((a, c) => a + (c.countedVotes ?? 0), 0))}
+                    </span>
+                  </li>
+                )}
               </ol>
+            </section>
+
+            <section className="t-map" aria-label="Mapa com foco rotativo por UF">
+              <UfMap
+                rows={t.map}
+                focus={rotation.focus}
+                since={rotation.since}
+                ms={rotation.ms}
+                slotOf={slotOf}
+                heroes={leaders}
+              />
             </section>
 
             <section className="t-same">
@@ -261,7 +295,7 @@ function TelaoView({ env, data: t }: { env: EnvironmentConfig; data: TelaoData }
               />
             </section>
 
-            <UfStrip rows={t.map} slotOf={slotOf} leaderIds={leaders.map((l) => l.id)} />
+            <StateMosaic rows={t.map} focus={rotation.focus} slotOf={slotOf} heroes={leaders} />
           </main>
         )}
         <div className="sr-only" aria-live="polite">
@@ -410,7 +444,7 @@ function Indicators({
   return (
     <dl className="totals indicators">
       <div>
-        <dt>Diferença entre os dois</dt>
+        <dt>Diferença</dt>
         <dd>
           <Rolling value={gap} format={int} />
         </dd>
@@ -426,56 +460,12 @@ function Indicators({
         </span>
       </div>
       <div>
-        <dt>Eleitores em seções não apuradas</dt>
+        <dt>Eleitores a apurar</dt>
         <dd>
           <Rolling value={remaining} format={int} />
         </dd>
-        <span className="note">não é previsão</span>
+        <span className="note">seções não apuradas</span>
       </div>
     </dl>
-  );
-}
-
-function UfStrip({
-  rows,
-  slotOf,
-  leaderIds,
-}: {
-  rows: { territoryId: string; snapshot: Snapshot | null }[];
-  slotOf: (id: string) => Slot | undefined;
-  leaderIds: string[];
-}) {
-  const ufs = rows.filter((r) => r.territoryId.length === 2 && r.territoryId !== 'zz');
-  return (
-    <section className="ufs" aria-label="Apuração por UF">
-      {ufs.map((r) => {
-        const s = r.snapshot;
-        const top = s
-          ? [...s.candidates]
-              .filter((c) => c.validShare !== null)
-              .sort((a, b) => (b.countedVotes ?? 0) - (a.countedVotes ?? 0))
-          : [];
-        const lead =
-          top.length > 1 && top[0].validShare !== null && top[1].validShare !== null
-            ? (top[0].validShare - top[1].validShare) * 100
-            : null;
-        const slot = top[0] && leaderIds.includes(top[0].id) ? slotOf(top[0].id) : undefined;
-        return (
-          <div key={r.territoryId} className="uf" title={top[0]?.name}>
-            <span className="code">{r.territoryId.toUpperCase()}</span>
-            <span className="meter">
-              <span style={{ width: `${(s?.sections.share ?? 0) * 100}%` }} />
-            </span>
-            <span className="val">
-              {s?.sections.share == null ? '—' : pct(s.sections.share, 0)}
-            </span>
-            <span className="lead">
-              <i style={{ background: s && lead !== null ? paint(slot).main : 'transparent' }} />
-              {lead === null ? '—' : `+${lead.toFixed(1).replace('.', ',')}`}
-            </span>
-          </div>
-        );
-      })}
-    </section>
   );
 }

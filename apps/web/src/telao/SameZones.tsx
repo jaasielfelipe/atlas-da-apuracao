@@ -126,7 +126,7 @@ function Chart({ points, series: SERIES }: { points: Point[]; series: Series }) 
   if (points.length < 2)
     return <p className="empty small">A linha do tempo aparece a partir da segunda captura.</p>;
   const W = 600,
-    H = 230,
+    H = 150,
     left = 46,
     right = 120,
     top = 12,
@@ -212,9 +212,8 @@ function Chart({ points, series: SERIES }: { points: Point[]; series: Series }) 
         ))}
       </div>
       <figcaption>
-        Linhas cheias: 2026 · tracejadas: 2022 nas mesmas zonas · barras: zonas na comparação em
-        cada captura. A coorte cresce ao longo da noite; cada ponto usa só as zonas concluídas
-        naquele instante.
+        Cheias: 2026 · tracejadas: 2022 nas mesmas zonas · barras: zonas na comparação a cada
+        captura.
       </figcaption>
     </figure>
   );
