@@ -70,3 +70,18 @@ O usuário determinou: “TSE asks for maximum of 100 requests per second. we ma
 - **Cores:** Lula = vermelho, Flávio = verde (“Cores: Lula = Vermelho, Flávio = Verde”). Aplicadas às séries `lula_haddad` e `bolsonaro` por identidade (nunca por posição). Par validado para deficiência de visão de cores (tema escuro `#be2b2b`/`#33ab64`, ΔE CVD 12,3; claro `#e5484d`/`#1d8a4a`) e sempre acompanhado de nome e raia. Verde não é usado para outros significados no telão (zona além da meta em âmbar).
 - **Fatos aritméticos:** o usuário pediu elementos que indiquem fatos relevantes (“2º turno confirmado; Vitória matemática, etc.”). Exibidos somente quando garantidos pelos números publicados para qualquer resultado das seções restantes, com limite conservador (todo eleitor apto restante poderia votar e votar no candidato menos favorável à afirmação; sub judice tratado como possivelmente válido; anulados nunca): vitória matemática no 1º turno (votos > metade dos válidos ainda possíveis), 2º turno confirmado (ninguém pode passar de 50% dos válidos), finalistas definidos (3º não alcança o 2º). Não são previsão nem probabilidade; texto informa que estão sujeitos a retificação e que o resultado é proclamado pelo TSE. Regra 10 permanece para todo o resto.
 - **Demonstração:** `/telao?demo` (e `?demo=vitoria`, `&ritmo=ms`) gera apuração sintética no navegador, com nomes genéricos e selo DEMONSTRAÇÃO; nunca persiste nem usa rota oficial.
+
+## Replicação local — para agentes
+
+Siga [docs/REPLICAR.md](docs/REPLICAR.md); não improvise outro caminho. Resumo operacional:
+
+1. `pnpm install --frozen-lockfile && pnpm build && pnpm test` (sem rede). Verifique antes de mudar qualquer coisa.
+2. Nível 0 (padrão para desenvolvimento e revisão visual): `pnpm start` e `/telao?demo` ou `/`. Não exige rede nem dados.
+3. Nível 1 (coleta oficial): só com pedido explícito do usuário. **Um único coletor TSE por máquina/IP** (`pnpm collect:official:live`); confirme que nenhum outro está rodando (`data/national-benchmark/active.lock`). Nunca rode oficial e simulado juntos. Teto de 80 req/s; prefira taxas menores fora da noite da apuração.
+4. Nível 2 (históricos ~951 MB + `pnpm accept:territorial-audit`): só com pedido explícito; o passo de aceite reproduz uma decisão já registrada do usuário e recusa se os hashes não baterem — não contorne.
+5. Para outra cópia ao lado de uma em execução, use `ATLAS_API_PORT`/`ATLAS_WEB_PORT` (ex.: `pnpm dev:rework` usa 3101/5273) e nunca reinicie processos de outra pessoa sem pedir.
+6. Antes de declarar pronto: `pnpm typecheck`, `pnpm test`, `pnpm build`, `pnpm test:e2e` e `pnpm format:check` com **código de saída** verificado (não confiar em `| grep`), mais revisão visual quando houver UI.
+
+### Estado — 04/10/2026, tarde
+
+Telão integrado ao `main` (rotas `/live/<env>/telao`; feed `/zone-feed`; status `/status`), junto com o painel explorador. Tag `v1.0-eleicao-2026` = versão anterior ao telão; `v1.1-telao` = esta. Na noite de 04/10 o telão foi operado a partir de uma segunda cópia (porta 3101) lendo o mesmo acervo oficial; o painel 3001 e o coletor seguiram na versão estável.

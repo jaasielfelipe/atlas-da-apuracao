@@ -22,7 +22,7 @@ pnpm start                     # http://127.0.0.1:3001
 pnpm collect:official:live     # Ctrl+C para parar com drenagem
 ```
 
-- [ ] Abrir `http://127.0.0.1:3001/live/official` (painel principal oficial). Cabeçalho deve mostrar **OFICIAL TSE** e **Coletor ativo**.
+- [ ] Abrir `http://127.0.0.1:3001/live/official/telao` (telão, tela grande) e/ou `http://127.0.0.1:3001/live/official` (painel explorador). Cabeçalho deve mostrar **OFICIAL TSE** e **Coletor ativo**.
 - [ ] Primeira linha do coletor: `cadastro 95a5a0a7530a … 6379 jobs`. Se o digest do cadastro mudar, ver “Incidentes”.
 - [ ] Rampa esperada: 10 → 80 req/s em ~105 s. Varredura nacional completa em ~2–3 min (medido no simulado).
 - [ ] Salvar até 20 municípios de interesse no painel: o coletor inicia o agregado municipal em ≤10 s, sem reinício. Zonas são nacionais independentemente dos favoritos.
