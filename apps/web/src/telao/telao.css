@@ -1177,7 +1177,21 @@ dl.minor dd small {
   column-gap: 12px;
   row-gap: 1px;
   font-size: 14px;
-  animation: t-feed-in 800ms cubic-bezier(0.2, 0.8, 0.2, 1);
+  padding: 3px 8px;
+  margin: 0 -8px;
+  border-radius: 6px;
+}
+.feed li.new {
+  animation: t-feed-new 2600ms ease-out;
+}
+@keyframes t-feed-new {
+  0%,
+  30% {
+    background: rgba(229, 166, 64, 0.16);
+  }
+  100% {
+    background: transparent;
+  }
 }
 .feed .when {
   width: 64px;
@@ -1380,4 +1394,10 @@ dl.minor dd small {
 }
 .t-left .sz-delta {
   font-size: 15px;
+}
+
+/* Feed: oldest entries fade out at the bottom edge instead of vanishing */
+.feed ol {
+  -webkit-mask-image: linear-gradient(to bottom, #000 70%, transparent);
+  mask-image: linear-gradient(to bottom, #000 70%, transparent);
 }

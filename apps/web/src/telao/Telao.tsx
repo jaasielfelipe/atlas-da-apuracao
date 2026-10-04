@@ -360,25 +360,9 @@ function Outcomes({
   const name = (c: CandidateResult) => (
     <b style={{ color: paint(slotOf(c.id)).main }}>{title(c.name)}</b>
   );
-  const finalists = facts.find((f) => f.kind === 'finalists');
   const runoff = facts.some((f) => f.kind === 'runoff');
   const victory = facts.find((f) => f.kind === 'victory');
-  const pair =
-    finalists && finalists.kind === 'finalists' ? finalists.candidates : heroes.slice(0, 2);
   const cards: { key: string; on: boolean; title: ReactNode; open: string }[] = [
-    {
-      key: 'finalists',
-      on: !!finalists,
-      title:
-        pair.length === 2 ? (
-          <>
-            {name(pair[0])} e {name(pair[1])} no 2º turno
-          </>
-        ) : (
-          'Finalistas definidos'
-        ),
-      open: 'o 3º colocado ainda pode alcançar o 2º',
-    },
     {
       key: 'runoff',
       on: runoff,

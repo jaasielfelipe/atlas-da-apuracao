@@ -17,7 +17,7 @@ test('telão: pista, placar, mesmas zonas, faixa de UFs e novo boletim ao vivo',
   await expect(page.locator('.region-name').first()).toContainText('Sul');
   await expect(page.locator('.feed')).toBeVisible();
   await expect(page.locator('.stats').first()).toContainText('Votos apurados');
-  await expect(page.locator('.outcome')).toHaveCount(4);
+  await expect(page.locator('.outcome')).toHaveCount(3);
   await expect(page.locator('.mosaic .col')).not.toHaveCount(0);
   await expect(page.locator('.mosaic .col.focus')).toHaveCount(1);
   await expect(page.locator('.readout .uf-name')).not.toBeEmpty();
@@ -96,7 +96,7 @@ test('telão demonstração: boletins sintéticos em sequência e fatos aritmét
   // Results coming in: synthetic município–zona updates with votes added in this election.
   await expect(page.locator('.feed li').first()).toContainText('seções');
   // The other outcomes stay on screen, faded.
-  await expect(page.locator('.outcome:not(.on)')).toHaveCount(3);
+  await expect(page.locator('.outcome:not(.on)')).toHaveCount(2);
   await expect(
     page.locator('.race-runner').filter({ hasText: 'passou da meta ajustada' }),
   ).toHaveCount(1);
