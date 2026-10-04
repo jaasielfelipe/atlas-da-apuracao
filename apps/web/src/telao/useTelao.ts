@@ -5,6 +5,7 @@ import { api } from '../format';
 import type { EnvironmentConfig } from '../environment';
 import type { CollectionState, MapRow } from '../useDashboard';
 import { bulletins } from './race';
+import { changedTerritories, mergeTimeline, type Change } from './changes';
 import { DEMO_STEPS, demoComparison, demoMap, demoSnapshot, type DemoScenario } from './demo';
 
 export type ComparisonResponse = {
@@ -23,22 +24,31 @@ export type StatusResponse = {
 };
 
 const LATEST_MS = 5_000,
+  MAP_MS = 10_000,
   SLOW_MS = 30_000;
+
+/** States changed by the latest observed bulletin, and when that was observed. */
+export type Changes = { items: Change[]; at: number };
+type Point = ComparisonResponse['timeline'][number];
 
 /**
  * Data for the big-screen view: the national presidential snapshot every 5 s (history only when a
- * new bulletin arrives), comparison/UF/collector state every 30 s. Failures keep the last data.
+ * new bulletin arrives), UF snapshots every 10 s (to react to state bulletins), comparison and
+ * collector state every 30 s. Failures keep the last data.
  */
 export function useTelao(env: EnvironmentConfig) {
   const { base } = env;
   const [series, setSeries] = useState<Snapshot[]>([]);
   const [map, setMap] = useState<MapRow[]>([]);
+  const [changes, setChanges] = useState<Changes>({ items: [], at: 0 });
   const [comparison, setComparison] = useState<ComparisonResponse | null>(null);
+  const [history, setHistory] = useState<Point[]>([]);
   const [comparisonError, setComparisonError] = useState('');
   const [status, setStatus] = useState<StatusResponse | null>(null);
   const [lastOk, setLastOk] = useState<number | null>(null);
   const [error, setError] = useState('');
   const digest = useRef<string | null>(null);
+  const previousMap = useRef<MapRow[] | null>(null);
 
   const pollLatest = useCallback(async () => {
     try {
@@ -57,25 +67,35 @@ export function useTelao(env: EnvironmentConfig) {
     }
   }, [base]);
 
-  const pollSlow = useCallback(async () => {
-    const [m, c, s, x] = await Promise.allSettled([
+  const pollMap = useCallback(async () => {
+    const [m, x] = await Promise.allSettled([
       api<MapRow[]>(`${base}/map?territory=br&office=president`),
+      // Exterior is not a map row (no geometry) but belongs in the proportional state mosaic.
+      api<{ snapshot: Snapshot | null }>(`${base}/latest?territory=zz&office=president`),
+    ]);
+    if (m.status !== 'fulfilled') return;
+    const rows = [
+      ...m.value.filter((r) => r.territoryId !== 'zz'),
+      ...(x.status === 'fulfilled' && x.value.snapshot
+        ? [{ territoryId: 'zz', snapshot: x.value.snapshot }]
+        : []),
+    ];
+    const changed = changedTerritories(previousMap.current, rows);
+    previousMap.current = rows;
+    setMap(rows);
+    if (changed.length) setChanges({ items: changed, at: Date.now() });
+  }, [base]);
+
+  const pollSlow = useCallback(async () => {
+    const [c, s] = await Promise.allSettled([
       env.comparison.available
         ? api<ComparisonResponse>(`${base}/comparison?territory=br&office=president`)
         : Promise.reject(Error(env.comparison.summary)),
       api<StatusResponse>(`${base}/status`),
-      // Exterior is not a map row (no geometry) but belongs in the proportional state mosaic.
-      api<{ snapshot: Snapshot | null }>(`${base}/latest?territory=zz&office=president`),
     ]);
-    if (m.status === 'fulfilled')
-      setMap([
-        ...m.value.filter((r) => r.territoryId !== 'zz'),
-        ...(x.status === 'fulfilled' && x.value.snapshot
-          ? [{ territoryId: 'zz', snapshot: x.value.snapshot }]
-          : []),
-      ]);
     if (c.status === 'fulfilled') {
       setComparison(c.value);
+      setHistory((h) => mergeTimeline(h, c.value.timeline));
       setComparisonError('');
     } else setComparisonError((c.reason as Error).message);
     if (s.status === 'fulfilled') setStatus(s.value);
@@ -83,21 +103,25 @@ export function useTelao(env: EnvironmentConfig) {
 
   useEffect(() => {
     pollLatest();
+    pollMap();
     pollSlow();
-    const fast = window.setInterval(pollLatest, LATEST_MS),
-      slow = window.setInterval(pollSlow, SLOW_MS);
-    return () => {
-      window.clearInterval(fast);
-      window.clearInterval(slow);
-    };
-  }, [pollLatest, pollSlow]);
+    const timers = [
+      window.setInterval(pollLatest, LATEST_MS),
+      window.setInterval(pollMap, MAP_MS),
+      window.setInterval(pollSlow, SLOW_MS),
+    ];
+    return () => timers.forEach((t) => window.clearInterval(t));
+  }, [pollLatest, pollMap, pollSlow]);
 
   return {
     series,
     current: series.at(-1) ?? null,
     previous: series.at(-2) ?? null,
     map,
+    changes,
     comparison,
+    /** Every comparison point received since the screen opened (the API sends the last 20). */
+    history,
     comparisonError,
     status,
     lastOk,
@@ -113,6 +137,9 @@ export type Telao = ReturnType<typeof useTelao>;
 export function useDemo(scenario: DemoScenario, intervalMs = 3000): Telao {
   const [k, setK] = useState(0);
   const [series, setSeries] = useState<Snapshot[]>([]);
+  const [history, setHistory] = useState<Point[]>([]);
+  const [changes, setChanges] = useState<Changes>({ items: [], at: 0 });
+  const previousMap = useRef<MapRow[] | null>(null);
   useEffect(() => {
     const timer = window.setInterval(
       () => setK((step) => (step >= DEMO_STEPS + 4 ? 0 : step + 1)),
@@ -120,8 +147,13 @@ export function useDemo(scenario: DemoScenario, intervalMs = 3000): Telao {
     );
     return () => window.clearInterval(timer);
   }, [intervalMs]);
+  const step = Math.min(k, DEMO_STEPS);
+  const map = useMemo(() => demoMap(step, scenario), [step, scenario]);
+  const comparison = useMemo(
+    () => demoComparison(step, scenario, Date.now() - step * 1000),
+    [step, scenario],
+  );
   useEffect(() => {
-    const step = Math.min(k, DEMO_STEPS);
     const snapshot = demoSnapshot(step, scenario, Date.now() - step * 1000);
     setSeries((previous) =>
       k === 0
@@ -130,19 +162,20 @@ export function useDemo(scenario: DemoScenario, intervalMs = 3000): Telao {
           ? previous
           : [...previous, snapshot],
     );
+    const changed = changedTerritories(k === 0 ? null : previousMap.current, map);
+    previousMap.current = map;
+    if (changed.length) setChanges({ items: changed, at: Date.now() });
+    setHistory((h) => (k === 0 ? comparison.timeline : mergeTimeline(h, comparison.timeline)));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [k, scenario]);
-  const step = Math.min(k, DEMO_STEPS);
-  const map = useMemo(() => demoMap(step, scenario), [step, scenario]);
-  const comparison = useMemo(
-    () => demoComparison(step, scenario, Date.now() - step * 1000),
-    [step, scenario],
-  );
   return {
     series,
     current: series.at(-1) ?? null,
     previous: series.at(-2) ?? null,
     map,
+    changes,
     comparison,
+    history,
     comparisonError: '',
     status: {
       environment: 'fixture',

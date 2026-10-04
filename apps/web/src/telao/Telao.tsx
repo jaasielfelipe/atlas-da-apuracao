@@ -99,7 +99,7 @@ function TelaoView({ env, data: t }: { env: EnvironmentConfig; data: TelaoData }
         .map((r) => r.territoryId),
     [t.map],
   );
-  const rotation = useRotation(rotationIds);
+  const rotation = useRotation(rotationIds, 7000, t.changes);
 
   const race = current
     ? raceState(
@@ -256,16 +256,20 @@ function TelaoView({ env, data: t }: { env: EnvironmentConfig; data: TelaoData }
                 focus={rotation.focus}
                 since={rotation.since}
                 ms={rotation.ms}
+                bulletin={rotation.bulletin}
                 slotOf={slotOf}
                 heroes={leaders}
               />
-              <SameZonesTrend
-                timeline={t.comparison?.timeline ?? []}
-                synthetic={env.id !== 'official'}
-              />
+              <SameZonesTrend timeline={t.history} synthetic={env.id !== 'official'} />
             </section>
 
-            <StateMosaic rows={t.map} focus={rotation.focus} slotOf={slotOf} heroes={leaders} />
+            <StateMosaic
+              rows={t.map}
+              focus={rotation.focus}
+              changes={t.changes}
+              slotOf={slotOf}
+              heroes={leaders}
+            />
           </main>
         )}
         <div className="sr-only" aria-live="polite">

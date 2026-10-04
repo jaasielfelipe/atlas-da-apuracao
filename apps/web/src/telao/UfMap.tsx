@@ -41,6 +41,7 @@ export default function UfMap({
   focus,
   since,
   ms,
+  bulletin = false,
   slotOf,
   heroes,
 }: {
@@ -48,6 +49,8 @@ export default function UfMap({
   focus: string | null;
   since: number;
   ms: number;
+  /** Focus came from a new bulletin in this state (not the regular rotation). */
+  bulletin?: boolean;
   slotOf: (id: string) => Slot | undefined;
   heroes: CandidateResult[];
 }) {
@@ -114,6 +117,7 @@ export default function UfMap({
             slotOf={slotOf}
             since={since}
             ms={ms}
+            bulletin={bulletin}
           />
         )}
         <div className="ufmap-legend">cor: quem lidera · intensidade: % apurado</div>
@@ -129,6 +133,7 @@ function FocusReadout({
   slotOf,
   since,
   ms,
+  bulletin,
 }: {
   uf: string;
   s: Snapshot | null;
@@ -136,6 +141,7 @@ function FocusReadout({
   slotOf: (id: string) => Slot | undefined;
   since: number;
   ms: number;
+  bulletin: boolean;
 }) {
   const people = heroes
     .map((h) => s?.candidates.find((c) => c.id === h.id) ?? null)
@@ -150,6 +156,7 @@ function FocusReadout({
       : null;
   return (
     <div className="readout">
+      {bulletin && <span className="uf-fresh">novo boletim nesta UF</span>}
       <span className="uf-name">{UF_NAMES[uf] ?? uf.toUpperCase()}</span>
       <span className="uf-meta">
         {s?.sections.share == null ? '—' : pct(s.sections.share)} das seções ·{' '}

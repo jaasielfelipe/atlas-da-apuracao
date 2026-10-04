@@ -2,6 +2,7 @@ import type { CandidateResult } from '../../../../packages/domain/src/index';
 import { mosaic, UF_NAMES } from './geo';
 import { paint, type Slot } from './paint';
 import type { UfRow } from './UfMap';
+import type { Changes } from './useTelao';
 
 const WIDTH = 1824,
   GAP = 4,
@@ -16,11 +17,14 @@ const pct0 = (v: number) => `${Math.round(v * 100)}%`;
 export default function StateMosaic({
   rows,
   focus,
+  changes,
   slotOf,
   heroes,
 }: {
   rows: UfRow[];
   focus: string | null;
+  /** States changed by the latest observed bulletin (light, fading highlight). */
+  changes?: Changes;
   slotOf: (id: string) => Slot | undefined;
   heroes: CandidateResult[];
 }) {
@@ -53,11 +57,12 @@ export default function StateMosaic({
           });
           const rest = valid ? Math.max(0, 1 - parts.reduce((a, p) => a + p.share, 0)) : 0;
           const on = r.territoryId === focus;
+          const fresh = !!changes?.items.some((c) => c.id === r.territoryId);
           const w = widths[i];
           return (
             <div
-              key={r.territoryId}
-              className={`col ${on ? 'focus' : ''}`}
+              key={`${r.territoryId}-${fresh ? changes!.at : 0}`}
+              className={`col ${on ? 'focus' : ''} ${fresh ? 'fresh' : ''}`}
               style={{ width: `${w}px` }}
               title={`${UF_NAMES[r.territoryId] ?? r.territoryId}: ${pct0(s.sections.share ?? 0)} apurado`}
             >

@@ -156,7 +156,10 @@ export function demoMap(k: number, scenario: DemoScenario): MapRow[] {
     // Regions report at different speeds and lean differently (synthetic).
     const speed = 0.75 + ((i * 37) % 50) / 100;
     const lean = (((i * 53) % 27) - 13) / 100;
-    const s = Math.min(1, progress(k) * speed);
+    // Each state reports every 2–4 bulletins (synthetic), not all at once.
+    const period = 2 + (i % 3);
+    const own = Math.max(0, k - ((k + i) % period));
+    const s = Math.min(1, progress(own) * speed);
     const step = Math.round(s * DEMO_STEPS);
     const base = scaled(demoSnapshot(step, scenario, 0), ELECTORATE[uf] / REGISTERED);
     const l = Math.max(0.05, base.candidates[0].validShare! + lean),
