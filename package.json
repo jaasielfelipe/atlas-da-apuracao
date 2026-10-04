@@ -11,6 +11,7 @@
     "dev": "node scripts/dev.mjs",
     "dev:api": "tsx watch apps/api/src/index.ts",
     "dev:web": "vite --config apps/web/vite.config.ts",
+    "dev:rework": "node scripts/dev-rework.mjs",
     "test": "vitest run",
     "test:contracts": "vitest run packages/tse packages/domain",
     "test:e2e": "playwright test",

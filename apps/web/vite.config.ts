@@ -1,6 +1,8 @@
 import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
 import { fileURLToPath } from 'node:url';
+// ATLAS_API_PORT / ATLAS_WEB_PORT: run a second checkout (e.g. the rework) beside the main one.
+const api = `http://127.0.0.1:${process.env.ATLAS_API_PORT ?? 3001}`;
 export default defineConfig({
   root: fileURLToPath(new URL('.', import.meta.url)),
   plugins: [react()],
@@ -22,12 +24,12 @@ export default defineConfig({
   },
   server: {
     host: '127.0.0.1',
-    port: 5173,
+    port: Number(process.env.ATLAS_WEB_PORT ?? 5173),
     strictPort: true,
     proxy: {
-      '/api': 'http://127.0.0.1:3001',
-      '/health': 'http://127.0.0.1:3001',
-      '/maps': 'http://127.0.0.1:3001',
+      '/api': api,
+      '/health': api,
+      '/maps': api,
     },
   },
   preview: { host: '127.0.0.1', port: 4173, strictPort: true },

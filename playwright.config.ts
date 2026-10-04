@@ -2,6 +2,7 @@ import { defineConfig } from '@playwright/test';
 import { e2ePaths } from './tests/e2e/paths';
 
 const paths = e2ePaths();
+const web = `http://127.0.0.1:${process.env.ATLAS_WEB_PORT ?? 5173}`;
 export default defineConfig({
   testDir: './tests/e2e',
   workers: 1,
@@ -10,7 +11,7 @@ export default defineConfig({
   globalSetup: './tests/e2e/global-setup.ts',
   globalTeardown: './tests/e2e/global-teardown.ts',
   use: {
-    baseURL: 'http://127.0.0.1:5173',
+    baseURL: web,
     viewport: { width: 1440, height: 1050 },
     channel:
       process.env.PLAYWRIGHT_CHANNEL ?? (process.platform === 'win32' ? 'msedge' : undefined),
@@ -20,7 +21,7 @@ export default defineConfig({
   },
   webServer: {
     command: 'node scripts/dev.mjs',
-    url: 'http://127.0.0.1:5173',
+    url: web,
     reuseExistingServer: false,
     env: {
       TSE_ENV: 'fixture',
@@ -28,6 +29,8 @@ export default defineConfig({
       OFFICIAL_DB: paths.official,
       SIMULATED_DB: paths.simulated,
       HISTORY_DB: paths.history,
+      ATLAS_API_PORT: process.env.ATLAS_API_PORT ?? '3001',
+      ATLAS_WEB_PORT: process.env.ATLAS_WEB_PORT ?? '5173',
     },
     timeout: 30000,
   },

@@ -47,9 +47,15 @@ export async function createApp(
     official.close();
     simulated.close();
   });
+  // Loopback only; ATLAS_API_PORT / ATLAS_WEB_PORT let a second checkout run beside the main one.
+  const localOrigins = new Set(
+    [process.env.ATLAS_WEB_PORT ?? '5173', '4173', process.env.ATLAS_API_PORT ?? '3001'].map(
+      (port) => `http://127.0.0.1:${port}`,
+    ),
+  );
   app.addHook('onRequest', async (request, reply) => {
     const origin = request.headers.origin;
-    if (origin && !/^http:\/\/127\.0\.0\.1:(5173|4173|3001)$/.test(origin))
+    if (origin && !localOrigins.has(origin))
       return reply.code(403).send({ error: 'Origem local obrigatória' });
   });
   app.setErrorHandler((error, request, reply) => {

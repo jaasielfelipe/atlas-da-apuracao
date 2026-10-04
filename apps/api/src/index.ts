@@ -8,7 +8,7 @@ const { app } = await createApp({
   historyDbPath: process.env.HISTORY_DB,
   logger: true,
 });
-await app.listen({ host: '127.0.0.1', port: 3001 });
+await app.listen({ host: '127.0.0.1', port: Number(process.env.ATLAS_API_PORT ?? 3001) });
 for (const signal of ['SIGINT', 'SIGTERM'] as const)
   process.once(signal, async () => {
     await app.close();
